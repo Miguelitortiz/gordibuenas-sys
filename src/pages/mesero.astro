@@ -1,0 +1,205 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="Mesero · Las Gordibuenas">
+  <div class="grid" style="gap: 1rem;">
+    <div class="row between">
+      <h1>Panel mesero</h1>
+      <nav>
+        <a href="/">Inicio</a>
+        <a href="/host">Host</a>
+        <a class="active" href="/mesero">Mesero</a>
+        <a href="/cocina">Cocina</a>
+      </nav>
+    </div>
+
+    <section class="card">
+      <h2>Nueva comanda</h2>
+      <div class="grid cols-3" id="guisadosGrid"></div>
+
+      <fieldset>
+        <legend>Bebidas</legend>
+        <div class="grid cols-3">
+          <label>Agua fresca chica <input type="number" min="0" value="0" id="aguaFrescaChica" /></label>
+          <label>Agua fresca 1 L <input type="number" min="0" value="0" id="aguaFrescaLitro" /></label>
+          <label>Café <input type="number" min="0" value="0" id="cafe" /></label>
+        </div>
+      </fieldset>
+
+      <label>Notas</label>
+      <textarea id="notes" rows="2" placeholder="Sin cebolla, extra salsa..."></textarea>
+
+      <div class="row">
+        <button class="btn" id="crearPedido">Enviar a cocina</button>
+        <span class="muted" id="statusMsg"></span>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Pedidos del día</h2>
+      <div id="ordersList" class="list"></div>
+    </section>
+  </div>
+
+  <script>
+    // @ts-nocheck
+    const guisadosGrid = document.getElementById('guisadosGrid');
+    const ordersList = document.getElementById('ordersList');
+    const statusMsg = document.getElementById('statusMsg');
+    const formState = { guisados: [] };
+
+    const parseIntSafe = (value) => {
+      const n = Number.parseInt(value, 10);
+      return Number.isFinite(n) && n >= 0 ? n : 0;
+    };
+
+    const loadConfig = async () => {
+      const res = await fetch('/api/config');
+      const config = await res.json();
+      formState.guisados = config.guisadosDelDia;
+      guisadosGrid.innerHTML = config.guisadosDelDia
+        .map(
+          (name) => `
+            <label>${name}
+              <input type="number" min="0" value="0" data-guisado="${name}" />
+            </label>
+          `,
+        )
+        .join('');
+    };
+
+    const sendOrder = async () => {
+      const guisados = formState.guisados.map((name) => ({
+        name,
+        quantity: parseIntSafe(document.querySelector(`[data-guisado="${name}"]`)?.value ?? '0'),
+      }));
+
+      const payload = {
+        notes: document.getElementById('notes').value,
+        guisados,
+        drinks: {
+          aguaFrescaChica: parseIntSafe(document.getElementById('aguaFrescaChica').value),
+          aguaFrescaLitro: parseIntSafe(document.getElementById('aguaFrescaLitro').value),
+          cafe: parseIntSafe(document.getElementById('cafe').value),
+        },
+      };
+
+      const res = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      statusMsg.textContent = res.ok ? 'Comanda enviada.' : 'Revisa los datos.';
+      if (res.ok) {
+        document.querySelectorAll('input[type="number"]').forEach((input) => {
+          input.value = '0';
+        });
+        document.getElementById('notes').value = '';
+        await loadOrders();
+      }
+    };
+
+    const updateOrder = async (id, mode) => {
+      let body;
+
+      if (mode === 'cancel') {
+        body = { status: 'cancelado' };
+      } else {
+        const root = document.querySelector(`[data-order-edit="${id}"]`);
+        const guisados = formState.guisados.map((name) => ({
+          name,
+          quantity: parseIntSafe(root.querySelector(`[data-edit-guisado="${id}-${name}"]`)?.value ?? '0'),
+        }));
+
+        body = {
+          notes: root.querySelector(`[data-edit-notes="${id}"]`)?.value ?? '',
+          guisados,
+          drinks: {
+            aguaFrescaChica: parseIntSafe(root.querySelector(`[data-edit-drink="${id}-aguaFrescaChica"]`)?.value ?? '0'),
+            aguaFrescaLitro: parseIntSafe(root.querySelector(`[data-edit-drink="${id}-aguaFrescaLitro"]`)?.value ?? '0'),
+            cafe: parseIntSafe(root.querySelector(`[data-edit-drink="${id}-cafe"]`)?.value ?? '0'),
+          },
+        };
+      }
+
+      const res = await fetch(`/api/orders/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      statusMsg.textContent = res.ok ? 'Pedido actualizado.' : 'No se pudo actualizar.';
+      await loadOrders();
+    };
+
+    const drinkQuantity = (order, drinkName) =>
+      order.items.find((item) => item.kind === 'bebida' && item.name === drinkName)?.quantity ?? 0;
+
+    const guisadoQuantity = (order, guisadoName) =>
+      order.items.find((item) => item.kind === 'guisado' && item.name === guisadoName)?.quantity ?? 0;
+
+    const renderOrder = (order) => {
+      const editable = !['terminado', 'cancelado'].includes(order.status);
+      const items = order.items
+        .map((item) => `${item.name} x${item.quantity} · $${item.total}`)
+        .join('<br/>');
+
+      const editor = editable
+        ? `
+          <div class="grid cols-3" data-order-edit="${order.id}">
+            ${formState.guisados
+              .map(
+                (name) => `<label>${name}<input data-edit-guisado="${order.id}-${name}" type="number" min="0" value="${guisadoQuantity(order, name)}" /></label>`,
+              )
+              .join('')}
+            <label>Agua chica<input data-edit-drink="${order.id}-aguaFrescaChica" type="number" min="0" value="${drinkQuantity(order, 'Agua fresca chica')}" /></label>
+            <label>Agua 1 L<input data-edit-drink="${order.id}-aguaFrescaLitro" type="number" min="0" value="${drinkQuantity(order, 'Agua fresca 1 L')}" /></label>
+            <label>Café<input data-edit-drink="${order.id}-cafe" type="number" min="0" value="${drinkQuantity(order, 'Café')}" /></label>
+            <label style="grid-column:1/-1;">Notas<input data-edit-notes="${order.id}" value="${order.notes ?? ''}" /></label>
+            <div class="row" style="grid-column:1/-1;">
+              <button class="btn secondary" data-action="save" data-id="${order.id}">Guardar cambios</button>
+              <button class="btn warn" data-action="cancel" data-id="${order.id}">Cancelar pedido</button>
+            </div>
+          </div>
+        `
+        : '';
+
+      return `
+        <article class="card">
+          <div class="row between">
+            <strong>Folio #${order.folio}</strong>
+            <span class="badge ${order.status}">${order.status.replace('_', ' ')}</span>
+          </div>
+          <p class="muted">${new Date(order.createdAt).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}</p>
+          <p>${items || 'Sin productos'}</p>
+          <p><strong>Total: $${order.total}</strong></p>
+          ${editor}
+        </article>
+      `;
+    };
+
+    const loadOrders = async () => {
+      const res = await fetch('/api/orders');
+      const orders = await res.json();
+      if (!orders.length) {
+        ordersList.innerHTML = '<div class="empty">Aún no hay pedidos.</div>';
+        return;
+      }
+
+      ordersList.innerHTML = orders.map(renderOrder).join('');
+      ordersList.querySelectorAll('button[data-action="save"]').forEach((button) => {
+        button.addEventListener('click', () => updateOrder(button.dataset.id, 'save'));
+      });
+      ordersList.querySelectorAll('button[data-action="cancel"]').forEach((button) => {
+        button.addEventListener('click', () => updateOrder(button.dataset.id, 'cancel'));
+      });
+    };
+
+    document.getElementById('crearPedido')?.addEventListener('click', sendOrder);
+
+    loadConfig().then(loadOrders);
+    setInterval(loadOrders, 3500);
+  </script>
+</BaseLayout>
