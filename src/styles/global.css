@@ -1,0 +1,181 @@
+:root {
+  color-scheme: light;
+  font-family: 'Inter', 'Segoe UI', sans-serif;
+  background: #f8f8f8;
+  color: #111;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+}
+
+.container {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 2rem 1rem 3rem;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+h1 {
+  font-size: clamp(1.9rem, 4vw, 2.8rem);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+
+h2 {
+  font-size: 1.05rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #666;
+}
+
+p,
+label,
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+.grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.grid.cols-3 {
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+.card {
+  background: #fff;
+  border: 1px solid #e5e5e5;
+  border-radius: 18px;
+  padding: 1rem;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.btn {
+  border: 1px solid #111;
+  background: #111;
+  color: #fff;
+  border-radius: 999px;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+}
+
+.btn.secondary {
+  background: transparent;
+  color: #111;
+}
+
+.btn.warn {
+  border-color: #a73434;
+  background: #a73434;
+}
+
+input,
+textarea,
+select {
+  width: 100%;
+  border: 1px solid #d3d3d3;
+  border-radius: 12px;
+  padding: 0.5rem 0.75rem;
+  background: #fff;
+}
+
+fieldset {
+  border: 1px solid #e5e5e5;
+  border-radius: 12px;
+  padding: 0.75rem;
+  margin: 0;
+}
+
+legend {
+  padding: 0 0.35rem;
+  color: #666;
+}
+
+nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+nav a {
+  text-decoration: none;
+  border: 1px solid #ccc;
+  border-radius: 999px;
+  padding: 0.35rem 0.85rem;
+  color: #111;
+}
+
+nav a.active {
+  background: #111;
+  color: white;
+  border-color: #111;
+}
+
+.badge {
+  display: inline-flex;
+  border-radius: 999px;
+  border: 1px solid #ddd;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.85rem;
+  align-items: center;
+}
+
+.badge.pendiente {
+  border-color: #d0b000;
+}
+
+.badge.en_preparacion {
+  border-color: #0067b8;
+}
+
+.badge.terminado {
+  border-color: #2f8f2f;
+}
+
+.badge.cancelado {
+  border-color: #a73434;
+}
+
+.list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.row.between {
+  justify-content: space-between;
+}
+
+.muted {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.empty {
+  border: 1px dashed #ccc;
+  border-radius: 12px;
+  padding: 1rem;
+  color: #666;
+}

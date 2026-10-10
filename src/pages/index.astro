@@ -1,0 +1,31 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="Las Gordibuenas · Sistema de comandas">
+  <div class="grid" style="gap: 1.25rem;">
+    <h1>Las Gordibuenas</h1>
+    <p class="muted">Sistema de comandas en red local para host, mesero y cocina.</p>
+
+    <nav>
+      <a href="/host">Host</a>
+      <a href="/mesero">Mesero</a>
+      <a href="/cocina">Cocina</a>
+    </nav>
+
+    <section class="grid cols-3">
+      <article class="card">
+        <h2>Host</h2>
+        <p>Define guisados del día y revisa resumen de pedidos diarios.</p>
+      </article>
+      <article class="card">
+        <h2>Mesero</h2>
+        <p>Registra, modifica o cancela pedidos en tiempo real.</p>
+      </article>
+      <article class="card">
+        <h2>Cocina</h2>
+        <p>Visualiza la cola de trabajo y marca pedidos como terminados.</p>
+      </article>
+    </section>
+  </div>
+</BaseLayout>

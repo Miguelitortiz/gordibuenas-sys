@@ -1,0 +1,95 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="Cocina · Las Gordibuenas">
+  <div class="grid" style="gap: 1rem;">
+    <div class="row between">
+      <h1>Panel cocina</h1>
+      <nav>
+        <a href="/">Inicio</a>
+        <a href="/host">Host</a>
+        <a href="/mesero">Mesero</a>
+        <a class="active" href="/cocina">Cocina</a>
+      </nav>
+    </div>
+
+    <section class="card">
+      <h2>Próximo pedido</h2>
+      <div id="nextOrder" class="empty">Sin pedidos pendientes.</div>
+    </section>
+
+    <section class="card">
+      <h2>Cola de cocina</h2>
+      <div id="queue" class="list"></div>
+    </section>
+  </div>
+
+  <script>
+    const queueEl = document.getElementById('queue');
+    const nextOrderEl = document.getElementById('nextOrder');
+
+    const toHumanStatus = (value) =>
+      value === 'en_preparacion' ? 'en preparación' : value.replace('_', ' ');
+
+    const renderCard = (order) => {
+      const items = order.items
+        .map((item) => `<li>${item.name} x${item.quantity}</li>`)
+        .join('');
+
+      return `
+        <article class="card">
+          <div class="row between">
+            <strong>Folio #${order.folio}</strong>
+            <span class="badge ${order.status}">${toHumanStatus(order.status)}</span>
+          </div>
+          <ul>${items}</ul>
+          <p class="muted">Notas: ${order.notes || 'N/A'}</p>
+          <div class="row">
+            ${order.status === 'pendiente' ? `<button class="btn secondary" data-action="start" data-id="${order.id}">Iniciar</button>` : ''}
+            ${order.status !== 'terminado' ? `<button class="btn" data-action="done" data-id="${order.id}">Terminar</button>` : ''}
+          </div>
+        </article>
+      `;
+    };
+
+    const updateStatus = async (id, status) => {
+      await fetch(`/api/orders/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+      });
+      await loadQueue();
+    };
+
+    const loadQueue = async () => {
+      const res = await fetch('/api/orders');
+      const orders = await res.json();
+      const queue = orders.filter((order) => ['pendiente', 'en_preparacion'].includes(order.status));
+
+      if (!queue.length) {
+        nextOrderEl.textContent = 'Sin pedidos pendientes.';
+        queueEl.innerHTML = '<div class="empty">No hay elementos en la cola.</div>';
+        return;
+      }
+
+      const nextOrder = queue.find((order) => order.status === 'pendiente') ?? queue[0];
+      nextOrderEl.innerHTML = `
+        <strong>Folio #${nextOrder.folio}</strong><br/>
+        Estado: ${toHumanStatus(nextOrder.status)}<br/>
+        Total: $${nextOrder.total}
+      `;
+
+      queueEl.innerHTML = queue.map(renderCard).join('');
+      queueEl.querySelectorAll('button[data-action="start"]').forEach((button) => {
+        button.addEventListener('click', () => updateStatus(button.dataset.id, 'en_preparacion'));
+      });
+      queueEl.querySelectorAll('button[data-action="done"]').forEach((button) => {
+        button.addEventListener('click', () => updateStatus(button.dataset.id, 'terminado'));
+      });
+    };
+
+    loadQueue();
+    setInterval(loadQueue, 2500);
+  </script>
+</BaseLayout>

@@ -1,0 +1,26 @@
+{
+  "name": "gordibuenas-sys",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "astro dev --host",
+    "build": "astro build",
+    "preview": "astro preview --host",
+    "check": "astro check"
+  },
+  "repository": {
+    "type": "git",
+    "url": "http://localhost:26831/Miguelitortiz/gordibuenas-sys"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@astrojs/node": "^11.1.7",
+    "astro": "^7.3.8",
+    "lowdb": "^7.0.1",
+    "zod": "^4.6.5"
+  }
+}
