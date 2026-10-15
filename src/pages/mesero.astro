@@ -3,203 +3,1911 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 ---
 
 <BaseLayout title="Mesero · Las Gordibuenas">
-  <div class="grid" style="gap: 1rem;">
-    <div class="row between">
-      <h1>Panel mesero</h1>
-      <nav>
-        <a href="/">Inicio</a>
-        <a href="/host">Host</a>
-        <a class="active" href="/mesero">Mesero</a>
-        <a href="/cocina">Cocina</a>
-      </nav>
-    </div>
-
-    <section class="card">
-      <h2>Nueva comanda</h2>
-      <div class="grid cols-3" id="guisadosGrid"></div>
-
-      <fieldset>
-        <legend>Bebidas</legend>
-        <div class="grid cols-3">
-          <label>Agua fresca chica <input type="number" min="0" value="0" id="aguaFrescaChica" /></label>
-          <label>Agua fresca 1 L <input type="number" min="0" value="0" id="aguaFrescaLitro" /></label>
-          <label>Café <input type="number" min="0" value="0" id="cafe" /></label>
+  <div class="screen-center-layout">
+    <div class="master-center-card">
+      
+      <!-- 1. Encabezado Suizo Superior (Espacio Maximizado, sin "LAS GORDIBUENAS") -->
+      <header class="row between" style="padding: 0.35rem 0.55rem; border-bottom: 2px solid var(--swiss-black); background: var(--swiss-white); flex-shrink: 0; gap: 0.35rem;">
+        <div class="row" style="gap: 0.25rem; flex: 1;">
+          <button type="button" id="tabBtnOrden" class="btn" style="flex: 1; min-height: 36px; padding: 0.2rem 0.3rem; font-size: 0.78rem; font-weight: 900; background: var(--swiss-black); color: var(--swiss-white); border: 1.5px solid var(--swiss-black); border-radius: var(--radius-swiss);">
+            ORDEN
+          </button>
+          <button type="button" id="tabBtnMod" class="btn secondary" style="flex: 1; min-height: 36px; padding: 0.2rem 0.3rem; font-size: 0.78rem; font-weight: 900; border: 1.5px solid var(--swiss-black); border-radius: var(--radius-swiss);">
+            MOD
+          </button>
+          <button type="button" id="tabBtnCobrar" class="btn secondary" style="flex: 1; min-height: 36px; padding: 0.2rem 0.3rem; font-size: 0.78rem; font-weight: 900; border: 1.5px solid var(--swiss-black); border-radius: var(--radius-swiss);">
+            COBRAR
+          </button>
         </div>
-      </fieldset>
 
-      <label>Notas</label>
-      <textarea id="notes" rows="2" placeholder="Sin cebolla, extra salsa..."></textarea>
+        <div class="row" style="gap: 0.25rem;">
+          <a href="/cocina" style="font-size: 0.75rem; font-weight: 900; text-decoration: none; border: 1.5px solid var(--swiss-black); padding: 0.25rem 0.45rem; border-radius: 4px; color: var(--swiss-black); text-transform: uppercase; min-height: 36px; display: inline-flex; align-items: center;">COCINA</a>
+        </div>
+      </header>
 
-      <div class="row">
-        <button class="btn" id="crearPedido">Enviar a cocina</button>
-        <span class="muted" id="statusMsg"></span>
+      <!-- Banner de Modo Activo (Modificando o Agregando) -->
+      <div id="activeModeBanner" style="display: none; padding: 0.35rem 0.75rem; justify-content: space-between; align-items: center; font-size: 0.75rem; font-weight: 800; border-bottom: 2px solid var(--swiss-black); flex-shrink: 0;">
+        <span id="activeModeBannerText"></span>
+        <button type="button" id="btnCancelActiveMode" class="btn secondary" style="min-height: 22px; padding: 0.1rem 0.45rem; font-size: 0.68rem; background: var(--swiss-white); color: var(--swiss-black);">CANCELAR</button>
       </div>
-    </section>
 
-    <section class="card">
-      <h2>Pedidos del día</h2>
-      <div id="ordersList" class="list"></div>
-    </section>
+      <!-- Banner de Audio Notificación (Con espacio fijo reservado, sin superponerse) -->
+      <div id="incomingAudioBanner" class="audio-notification-banner" style="display: none;">
+        <span id="incomingAudioText">MENSAJE DE COCINA</span>
+        <div class="row" style="gap: 0.35rem;">
+          <button id="replayAudioBtn" class="btn secondary" style="min-height: 24px; padding: 0.1rem 0.4rem; font-size: 0.68rem;">REPETIR</button>
+          <button id="dismissAudioBtn" style="background:transparent; border:none; color:#fff; cursor:pointer; font-weight:900;">X</button>
+        </div>
+      </div>
+
+      <!-- 2. Modalidad de Pedido (Comer Aquí / Para Llevar / Domicilio) -->
+      <div id="orderTypeControlContainer" style="padding: 0.4rem 0.75rem; border-bottom: 1px solid var(--swiss-gray-300); background: var(--swiss-gray-50); flex-shrink: 0;">
+        <div class="segmented-control" id="orderTypeControl">
+          <button type="button" class="segmented-btn active" data-type="aqui">COMER AQUI</button>
+          <button type="button" class="segmented-btn" data-type="llevar">PARA LLEVAR</button>
+          <button type="button" class="segmented-btn" data-type="domicilio">A DOMICILIO</button>
+        </div>
+
+        <!-- Campos de Identificación (Siempre pide nombre) -->
+        <div style="margin-top: 0.3rem;">
+          <div id="blockNombreCliente" style="display: flex; gap: 0.35rem;">
+            <input type="text" id="customerNameInput" placeholder="NOMBRE DEL CLIENTE O COMENSAL" style="font-size: 0.8rem; padding: 0.35rem 0.55rem; min-height: 34px; text-transform: uppercase;" />
+          </div>
+
+          <div id="blockDomicilio" style="display: none; flex-direction: column; gap: 0.25rem;">
+            <input type="text" id="deliveryAddressInput" placeholder="DIRECCION DE ENTREGA (CALLE, NUMERO, COLONIA)" style="font-size: 0.8rem; padding: 0.35rem 0.55rem; min-height: 34px; text-transform: uppercase;" />
+            <div class="row" style="gap: 0.35rem;">
+              <input type="tel" id="deliveryPhoneInput" placeholder="TELEFONO" style="font-size: 0.8rem; padding: 0.35rem 0.55rem; min-height: 34px;" />
+              <input type="text" id="deliveryCustomerNameInput" placeholder="NOMBRE CLIENTE" style="font-size: 0.8rem; padding: 0.35rem 0.55rem; min-height: 34px; text-transform: uppercase;" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. Área de Platos: Carrusel Deslizable y Retícula Autogenerativa -->
+      <div class="plate-card-container">
+        <!-- Barra de Píldoras de Navegación del Carrusel -->
+        <div class="plate-pills-bar" id="platePillsBarContainer">
+          <div class="row" id="platePillsList" style="gap: 0.25rem; flex: 1; overflow-x: auto;">
+            <!-- Píldoras de plato dinámicas -->
+          </div>
+          <button type="button" id="btnAddNewPlate" class="btn secondary" style="min-height: 28px; padding: 0.15rem 0.5rem; font-size: 0.72rem; white-space: nowrap;">
+            + PLATO
+          </button>
+        </div>
+
+        <!-- Tarjeta Interactiva del Plato Activo -->
+        <div id="activePlateCard" class="active-plate-card">
+          <!-- Cue flotante indicador del gesto -->
+          <div id="gestureCueOverlay" class="gesture-cue-overlay"></div>
+
+          <!-- Cabecera de la Tarjeta del Plato -->
+          <div class="row between" style="padding: 0.35rem 0.55rem; border-bottom: 1px solid var(--swiss-gray-300); background: var(--swiss-white); flex-shrink: 0;">
+            <div class="row" style="gap: 0.35rem;">
+              <span class="swiss-label" id="currentPlateTitle" style="color: var(--swiss-black);">PLATO 1</span>
+              <span class="badge" id="currentPlateBadge" style="background: var(--swiss-gray-100);">0 PZAS</span>
+            </div>
+
+            <!-- Botones manuales directos de carrusel -->
+            <div class="row" id="plateCardControls" style="gap: 0.25rem;">
+              <button type="button" id="btnPrevPlate" class="btn secondary" style="min-height: 26px; padding: 0.1rem 0.4rem; font-size: 0.7rem;">&lt;</button>
+              <button type="button" id="btnNextPlate" class="btn secondary" style="min-height: 26px; padding: 0.1rem 0.4rem; font-size: 0.7rem;">&gt;</button>
+              <button type="button" id="btnDeletePlate" class="btn warn" style="min-height: 26px; padding: 0.1rem 0.45rem; font-size: 0.7rem;">ELIMINAR</button>
+            </div>
+          </div>
+
+          <!-- Retícula Autogenerativa que ocupa el 100% del espacio disponible (Reutilizada para ORDEN, MOD y COBRAR) -->
+          <div class="products-autogen-grid" id="productsAutogenGrid">
+            <!-- Celdas autogenerativas -->
+          </div>
+
+          <!-- Campo de Notas del Plato -->
+          <div id="plateNoteInputContainer" style="padding: 0.3rem 0.5rem; border-top: 1px solid var(--swiss-gray-200); background: var(--swiss-white); flex-shrink: 0;">
+            <input type="text" id="plateNoteInput" placeholder="INDICACION PARA ESTE PLATO (SIN CEBOLLA, DORADA...)" style="font-size: 0.75rem; padding: 0.3rem 0.5rem; text-transform: uppercase;" />
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. Barra Inferior Fija de Acción (Sin Scroll) -->
+      <footer class="bottom-action-bar" style="flex-shrink: 0;">
+        <div>
+          <div class="bottom-total-text" id="displayGrandTotal">$0</div>
+          <div class="bottom-items-count" id="displayItemsCount">0 PRODUCTOS · 1 PLATO</div>
+        </div>
+
+        <button type="button" id="btnSubmitOrder" class="btn primary" style="flex: 1; max-width: 220px; min-height: 46px; font-size: 0.9rem;" disabled>
+          ENVIAR A COCINA -&gt;
+        </button>
+      </footer>
+
+      <!-- Botón Circular Flotante de Walkie Talkie (Abajo a la derecha) -->
+      <button id="wtButton" class="walkie-btn floating-circular-wt" title="Presionar y mantener para hablar con cocina">
+        <span id="wtLabel">WALKIE</span>
+        <span id="wtTimer" style="display:none; font-size: 0.65rem;">0:00</span>
+      </button>
+
+    </div>
+  </div>
+
+  <!-- Modal Flotante de Confirmación (Solo si el plato contiene productos) -->
+  <div id="confirmDeleteModal" class="swiss-modal-backdrop" style="display: none;">
+    <div class="swiss-modal-box">
+      <header class="swiss-modal-header">
+        <h3 class="swiss-modal-title" id="modalConfirmTitle">CONFIRMAR ELIMINACION</h3>
+      </header>
+      <div class="swiss-modal-body" id="modalConfirmBody">
+        Este plato contiene productos seleccionados. Deseas eliminarlo por completo?
+      </div>
+      <footer class="swiss-modal-actions">
+        <button type="button" class="btn secondary" id="modalCancelBtn">CANCELAR</button>
+        <button type="button" class="btn warn" id="modalDeleteBtn">ELIMINAR PLATO</button>
+      </footer>
+    </div>
+  </div>
+
+  <!-- Modal de Selección de Acción en Modo MOD -->
+  <div id="modActionModal" class="swiss-modal-backdrop" style="display: none;">
+    <div class="swiss-modal-box" style="max-width: 420px; width: 92%;">
+      <header class="swiss-modal-header">
+        <h3 class="swiss-modal-title" id="modActionModalTitle">COMENZAR ACCION</h3>
+      </header>
+      <div class="swiss-modal-body" id="modActionModalBody">
+      </div>
+      <footer class="swiss-modal-actions" style="flex-direction: column; gap: 0.4rem;">
+        <button type="button" class="btn secondary" id="btnDoModifyOrder" style="min-height: 42px; font-weight: 900; border-color: var(--swiss-black);">
+          MODIFICAR COMANDA ORIGINAL
+        </button>
+        <button type="button" class="btn primary" id="btnDoAddAccount" style="min-height: 42px; font-weight: 900;">
+          + AGREGAR A LA CUENTA (NUEVA TARJETA)
+        </button>
+        <button type="button" class="btn secondary" id="btnCancelModAction" style="min-height: 34px;">
+          CANCELAR
+        </button>
+      </footer>
+    </div>
+  </div>
+
+  <!-- Modal de Confirmación de Cobro en Modo COBRAR -->
+  <div id="cobrarConfirmModal" class="swiss-modal-backdrop" style="display: none;">
+    <div class="swiss-modal-box" style="max-width: 420px; width: 92%;">
+      <header class="swiss-modal-header">
+        <h3 class="swiss-modal-title" id="cobrarModalTitle">CONFIRMAR COBRO</h3>
+      </header>
+      <div class="swiss-modal-body" id="cobrarModalBody">
+      </div>
+      <footer class="swiss-modal-actions">
+        <button type="button" class="btn secondary" id="btnCancelCobrar">CANCELAR</button>
+        <button type="button" class="btn primary" id="btnConfirmCobrar" style="font-weight: 900;">COBRAR Y CERRAR CUENTA</button>
+      </footer>
+    </div>
   </div>
 
   <script>
     // @ts-nocheck
-    const guisadosGrid = document.getElementById('guisadosGrid');
-    const ordersList = document.getElementById('ordersList');
-    const statusMsg = document.getElementById('statusMsg');
-    const formState = { guisados: [] };
 
-    const parseIntSafe = (value) => {
-      const n = Number.parseInt(value, 10);
-      return Number.isFinite(n) && n >= 0 ? n : 0;
-    };
+    // ESTADO PRINCIPAL DE LA APLICACION
+    const state = {
+      currentTab: 'orden', // 'orden' | 'mod' | 'cobrar'
+      mode: 'normal', // 'normal' | 'modifying' | 'adding_to_account'
+      editingOrderId: null,
+      editingFolio: null,
+      activeAccountId: null,
 
-    const loadConfig = async () => {
-      const res = await fetch('/api/config');
-      const config = await res.json();
-      formState.guisados = config.guisadosDelDia;
-      guisadosGrid.innerHTML = config.guisadosDelDia
-        .map(
-          (name) => `
-            <label>${name}
-              <input type="number" min="0" value="0" data-guisado="${name}" />
-            </label>
-          `,
-        )
-        .join('');
-    };
+      orderType: 'aqui', // 'aqui' | 'llevar' | 'domicilio'
+      customerName: '',
+      deliveryAddress: '',
+      deliveryPhone: '',
+      
+      guisadosCatalog: [],
+      drinksCatalog: [
+        { name: 'AGUA CHICA', kind: 'bebida', price: 20 },
+        { name: 'AGUA 1 L', kind: 'bebida', price: 40 },
+        { name: 'CAFE', kind: 'bebida', price: 35 },
+      ],
 
-    const sendOrder = async () => {
-      const guisados = formState.guisados.map((name) => ({
-        name,
-        quantity: parseIntSafe(document.querySelector(`[data-guisado="${name}"]`)?.value ?? '0'),
-      }));
-
-      const payload = {
-        notes: document.getElementById('notes').value,
-        guisados,
-        drinks: {
-          aguaFrescaChica: parseIntSafe(document.getElementById('aguaFrescaChica').value),
-          aguaFrescaLitro: parseIntSafe(document.getElementById('aguaFrescaLitro').value),
-          cafe: parseIntSafe(document.getElementById('cafe').value),
+      activePlateIndex: 0,
+      plates: [
+        {
+          id: 'plate-1',
+          name: 'PLATO 1',
+          items: {}, // { [productName]: quantity }
+          notes: '',
         },
+      ],
+
+      lastAudioTimestamp: Date.now() - 60000,
+      lastPlayedAudioData: null,
+      playedAudioIds: new Set(),
+      isRecordingWT: false,
+      isSubmitting: false,
+    };
+
+    // CALCULADORA DE PRECIOS SUIZA (3 X $100 EN GORDITAS)
+    const calculateTotals = () => {
+      let totalGorditas = 0;
+      let totalDrinks = 0;
+      let drinksCost = 0;
+
+      state.plates.forEach((p) => {
+        for (const [name, qty] of Object.entries(p.items)) {
+          if (!qty || qty <= 0) continue;
+          const drink = state.drinksCatalog.find((d) => d.name === name);
+          if (drink) {
+            totalDrinks += qty;
+            drinksCost += drink.price * qty;
+          } else {
+            totalGorditas += qty;
+          }
+        }
+      });
+
+      const packs = Math.floor(totalGorditas / 3);
+      const rest = totalGorditas % 3;
+      const gorditasCost = packs * 100 + rest * 35;
+      const grandTotal = gorditasCost + drinksCost;
+      const totalItems = totalGorditas + totalDrinks;
+
+      return {
+        totalGorditas,
+        totalDrinks,
+        totalItems,
+        grandTotal,
+        plateCount: state.plates.length,
       };
+    };
 
-      const res = await fetch('/api/orders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
+    const updateActionFooter = () => {
+      const calc = calculateTotals();
+      const totalEl = document.getElementById('displayGrandTotal');
+      const countEl = document.getElementById('displayItemsCount');
+      const submitBtn = document.getElementById('btnSubmitOrder');
 
-      statusMsg.textContent = res.ok ? 'Comanda enviada.' : 'Revisa los datos.';
-      if (res.ok) {
-        document.querySelectorAll('input[type="number"]').forEach((input) => {
-          input.value = '0';
+      if (totalEl) totalEl.textContent = `$${calc.grandTotal}`;
+      if (countEl) {
+        countEl.textContent = `${calc.totalItems} PRODUCTOS · ${calc.plateCount} PLATO(S)`;
+      }
+
+      if (submitBtn) {
+        if (state.mode === 'modifying') {
+          submitBtn.textContent = 'GUARDAR MODIFICACION ->';
+        } else if (state.mode === 'adding_to_account') {
+          submitBtn.textContent = 'ENVIAR AGREGADO A COCINA ->';
+        } else {
+          submitBtn.textContent = 'ENVIAR A COCINA ->';
+        }
+        submitBtn.disabled = calc.totalItems === 0;
+        submitBtn.style.opacity = calc.totalItems === 0 ? '0.4' : '1';
+      }
+    };
+
+    // RENDERIZADO DE PILDORAS SUPERIORES DEL CARRUSEL
+    const renderPlatePills = () => {
+      const list = document.getElementById('platePillsList');
+      if (!list) return;
+
+      list.innerHTML = state.plates
+        .map((p, idx) => {
+          let count = 0;
+          for (const q of Object.values(p.items)) count += q;
+          const isActive = idx === state.activePlateIndex;
+          return `
+            <button type="button" class="plate-pill ${isActive ? 'active' : ''}" data-pill-index="${idx}">
+              ${p.name} [${count}]
+            </button>
+          `;
+        })
+        .join('');
+
+      list.querySelectorAll('[data-pill-index]').forEach((btn) => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const targetIdx = Number(btn.dataset.pillIndex);
+          if (targetIdx !== state.activePlateIndex) {
+            navigateToPlate(targetIdx, targetIdx > state.activePlateIndex ? 'right' : 'left');
+          }
         });
-        document.getElementById('notes').value = '';
-        await loadOrders();
-      }
-    };
-
-    const updateOrder = async (id, mode) => {
-      let body;
-
-      if (mode === 'cancel') {
-        body = { status: 'cancelado' };
-      } else {
-        const root = document.querySelector(`[data-order-edit="${id}"]`);
-        const guisados = formState.guisados.map((name) => ({
-          name,
-          quantity: parseIntSafe(root.querySelector(`[data-edit-guisado="${id}-${name}"]`)?.value ?? '0'),
-        }));
-
-        body = {
-          notes: root.querySelector(`[data-edit-notes="${id}"]`)?.value ?? '',
-          guisados,
-          drinks: {
-            aguaFrescaChica: parseIntSafe(root.querySelector(`[data-edit-drink="${id}-aguaFrescaChica"]`)?.value ?? '0'),
-            aguaFrescaLitro: parseIntSafe(root.querySelector(`[data-edit-drink="${id}-aguaFrescaLitro"]`)?.value ?? '0'),
-            cafe: parseIntSafe(root.querySelector(`[data-edit-drink="${id}-cafe"]`)?.value ?? '0'),
-          },
-        };
-      }
-
-      const res = await fetch(`/api/orders/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
       });
-
-      statusMsg.textContent = res.ok ? 'Pedido actualizado.' : 'No se pudo actualizar.';
-      await loadOrders();
     };
 
-    const drinkQuantity = (order, drinkName) =>
-      order.items.find((item) => item.kind === 'bebida' && item.name === drinkName)?.quantity ?? 0;
+    // RENDERIZADO DEL PLATO ACTIVO CON RETICULA AUTOGENERATIVA
+    const renderActivePlate = () => {
+      renderPlatePills();
+      const cur = state.plates[state.activePlateIndex];
+      if (!cur) return;
 
-    const guisadoQuantity = (order, guisadoName) =>
-      order.items.find((item) => item.kind === 'guisado' && item.name === guisadoName)?.quantity ?? 0;
+      const titleEl = document.getElementById('currentPlateTitle');
+      const badgeEl = document.getElementById('currentPlateBadge');
+      const noteInput = document.getElementById('plateNoteInput');
 
-    const renderOrder = (order) => {
-      const editable = !['terminado', 'cancelado'].includes(order.status);
-      const items = order.items
-        .map((item) => `${item.name} x${item.quantity} · $${item.total}`)
-        .join('<br/>');
+      let curItemsCount = 0;
+      for (const q of Object.values(cur.items)) curItemsCount += q;
 
-      const editor = editable
-        ? `
-          <div class="grid cols-3" data-order-edit="${order.id}">
-            ${formState.guisados
-              .map(
-                (name) => `<label>${name}<input data-edit-guisado="${order.id}-${name}" type="number" min="0" value="${guisadoQuantity(order, name)}" /></label>`,
-              )
-              .join('')}
-            <label>Agua chica<input data-edit-drink="${order.id}-aguaFrescaChica" type="number" min="0" value="${drinkQuantity(order, 'Agua fresca chica')}" /></label>
-            <label>Agua 1 L<input data-edit-drink="${order.id}-aguaFrescaLitro" type="number" min="0" value="${drinkQuantity(order, 'Agua fresca 1 L')}" /></label>
-            <label>Café<input data-edit-drink="${order.id}-cafe" type="number" min="0" value="${drinkQuantity(order, 'Café')}" /></label>
-            <label style="grid-column:1/-1;">Notas<input data-edit-notes="${order.id}" value="${order.notes ?? ''}" /></label>
-            <div class="row" style="grid-column:1/-1;">
-              <button class="btn secondary" data-action="save" data-id="${order.id}">Guardar cambios</button>
-              <button class="btn warn" data-action="cancel" data-id="${order.id}">Cancelar pedido</button>
+      if (titleEl) titleEl.textContent = `${cur.name} (${state.activePlateIndex + 1}/${state.plates.length})`;
+      if (badgeEl) badgeEl.textContent = `${curItemsCount} PZAS`;
+      if (noteInput) noteInput.value = cur.notes || '';
+
+      const grid = document.getElementById('productsAutogenGrid');
+      if (!grid) return;
+
+      const allCatalog = [
+        ...state.guisadosCatalog.map((name) => ({ name, kind: 'guisado', price: '$35' })),
+        ...state.drinksCatalog.map((d) => ({ name: d.name, kind: 'bebida', price: `$${d.price}` })),
+      ];
+
+      const totalItemsCount = allCatalog.length;
+
+      // CALCULO AUTOGENERATIVO DE RETICULA:
+      // Se adapta al numero total de productos para que abarque el 100% del alto y ancho
+      let cols = 3;
+      let rows = 2;
+
+      if (totalItemsCount <= 4) {
+        cols = 2;
+        rows = 2;
+      } else if (totalItemsCount <= 6) {
+        cols = 3;
+        rows = 2;
+      } else if (totalItemsCount <= 9) {
+        cols = 3;
+        rows = 3;
+      } else {
+        cols = 3;
+        rows = Math.ceil(totalItemsCount / 3);
+      }
+
+      grid.style.setProperty('--grid-cols', cols);
+      grid.style.setProperty('--grid-rows', rows);
+
+      grid.innerHTML = allCatalog
+        .map((prod) => {
+          const regKey = prod.name;
+          const quesoKey = `${prod.name} C/ QUESO`;
+          const regQty = cur.items[regKey] || 0;
+          const quesoQty = cur.items[quesoKey] || 0;
+          const totalQty = regQty + quesoQty;
+          const hasQty = totalQty > 0;
+
+          return `
+            <div class="product-cell ${hasQty ? 'has-qty' : ''} ${quesoQty > 0 ? 'has-queso' : ''}" data-prod-name="${prod.name}">
+              <div>
+                <div class="row between" style="align-items: flex-start; gap: 0.2rem;">
+                  <div class="product-cell-name">${prod.name}</div>
+                  ${quesoQty > 0 ? `
+                    <span class="badge" style="background: #fef08a; color: #854d0e; font-size: 0.62rem; font-weight: 900; border: 1px solid #ca8a04; padding: 0.1rem 0.3rem; border-radius: 3px; white-space: nowrap;">
+                      C/ QUESO ${quesoQty > 1 ? `x${quesoQty}` : ''}
+                    </span>
+                  ` : ''}
+                </div>
+              </div>
+              <div class="product-cell-footer">
+                <span class="product-cell-price">${prod.price}</span>
+                <div class="row" style="gap: 0.25rem; align-items: center;">
+                  ${hasQty ? `<div class="product-cell-minus" data-btn-minus="${prod.name}">-</div>` : ''}
+                  ${hasQty ? `
+                    <div class="product-cell-qty" style="${quesoQty > 0 && regQty === 0 ? 'background: #854d0e; color: #fef08a;' : ''}">
+                      ${regQty > 0 && quesoQty > 0 ? `${regQty}+${quesoQty}Q` : totalQty}
+                    </div>
+                  ` : '<span style="font-weight:900; font-size:1.1rem; color:#71717a;">+</span>'}
+                </div>
+              </div>
             </div>
-          </div>
-        `
-        : '';
+          `;
+        })
+        .join('');
 
-      return `
-        <article class="card">
-          <div class="row between">
-            <strong>Folio #${order.folio}</strong>
-            <span class="badge ${order.status}">${order.status.replace('_', ' ')}</span>
-          </div>
-          <p class="muted">${new Date(order.createdAt).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}</p>
-          <p>${items || 'Sin productos'}</p>
-          <p><strong>Total: $${order.total}</strong></p>
-          ${editor}
-        </article>
-      `;
+      updateActionFooter();
     };
 
-    const loadOrders = async () => {
-      const res = await fetch('/api/orders');
-      const orders = await res.json();
-      if (!orders.length) {
-        ordersList.innerHTML = '<div class="empty">Aún no hay pedidos.</div>';
+    // NAVEGACION REAL ENTRE TARJETAS CON ANIMACION DE CARRUSEL
+    const navigateToPlate = (newIndex, animDirection = 'right') => {
+      if (newIndex < 0 || newIndex >= state.plates.length) return;
+      const card = document.getElementById('activePlateCard');
+      if (!card) {
+        state.activePlateIndex = newIndex;
+        renderActivePlate();
         return;
       }
 
-      ordersList.innerHTML = orders.map(renderOrder).join('');
-      ordersList.querySelectorAll('button[data-action="save"]').forEach((button) => {
-        button.addEventListener('click', () => updateOrder(button.dataset.id, 'save'));
+      // Animación suave de salida:
+      // 'right' (avanzar): la tarjeta actual sale hacia la izquierda (-35px) y la nueva entra desde la derecha (35px)
+      // 'left' (retroceder): la tarjeta actual sale hacia la derecha (35px) y la nueva entra desde la izquierda (-35px)
+      const exitOffset = animDirection === 'right' ? '-35px' : '35px';
+      const enterOffset = animDirection === 'right' ? '35px' : '-35px';
+
+      card.style.transition = 'transform 0.12s ease-out, opacity 0.12s ease-out';
+      card.style.transform = `translateX(${exitOffset})`;
+      card.style.opacity = '0.2';
+
+      setTimeout(() => {
+        state.activePlateIndex = newIndex;
+        renderActivePlate();
+        card.style.transition = 'none';
+        card.style.transform = `translateX(${enterOffset})`;
+        card.style.opacity = '0.2';
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            card.style.transition = 'transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.18s ease-out';
+            card.style.transform = 'translate(0, 0)';
+            card.style.opacity = '1';
+          });
+        });
+      }, 120);
+    };
+
+    // ACCIONES DE GESTION DE PLATOS
+    const createNewPlate = () => {
+      const newNum = state.plates.length + 1;
+      state.plates.push({
+        id: `plate-${Date.now()}`,
+        name: `PLATO ${newNum}`,
+        items: {},
+        notes: '',
       });
-      ordersList.querySelectorAll('button[data-action="cancel"]').forEach((button) => {
-        button.addEventListener('click', () => updateOrder(button.dataset.id, 'cancel'));
+      navigateToPlate(state.plates.length - 1, 'right');
+    };
+
+    const renumberPlates = () => {
+      state.plates.forEach((p, i) => {
+        p.name = `PLATO ${i + 1}`;
       });
     };
 
-    document.getElementById('crearPedido')?.addEventListener('click', sendOrder);
+    const triggerDeletePlate = (idx) => {
+      if (state.plates.length <= 1) {
+        state.plates[0].items = {};
+        state.plates[0].notes = '';
+        state.plates[0].name = 'PLATO 1';
+        renderActivePlate();
+        return;
+      }
 
-    loadConfig().then(loadOrders);
-    setInterval(loadOrders, 3500);
+      const target = state.plates[idx];
+      let totalInPlate = 0;
+      for (const q of Object.values(target.items)) totalInPlate += q;
+
+      if (totalInPlate === 0) {
+        // VACIO: ELIMINAR INMEDIATAMENTE SIN MODAL
+        state.plates.splice(idx, 1);
+        renumberPlates();
+        const nextIdx = Math.min(state.activePlateIndex, state.plates.length - 1);
+        navigateToPlate(nextIdx, 'left');
+      } else {
+        // CON PRODUCTOS: ABRIR MODAL FLOTANTE DE CONFIRMACION
+        const modal = document.getElementById('confirmDeleteModal');
+        const modalTitle = document.getElementById('modalConfirmTitle');
+        const modalBody = document.getElementById('modalConfirmBody');
+
+        if (modalTitle) modalTitle.textContent = `ELIMINAR ${target.name}`;
+        if (modalBody) modalBody.textContent = `ESTE PLATO CONTIENE ${totalInPlate} PRODUCTOS. CONFIRMAS QUE DESEAS ELIMINARLO?`;
+        if (modal) modal.style.display = 'flex';
+
+        window.__targetDeleteIndex = idx;
+      }
+    };
+
+    // SETUP DEL MODAL FLOTANTE
+    const setupModal = () => {
+      const modal = document.getElementById('confirmDeleteModal');
+      const cancelBtn = document.getElementById('modalCancelBtn');
+      const deleteBtn = document.getElementById('modalDeleteBtn');
+
+      cancelBtn?.addEventListener('click', () => {
+        if (modal) modal.style.display = 'none';
+        window.__targetDeleteIndex = null;
+      });
+
+      deleteBtn?.addEventListener('click', () => {
+        const idx = window.__targetDeleteIndex;
+        if (typeof idx === 'number' && state.plates[idx]) {
+          state.plates.splice(idx, 1);
+          renumberPlates();
+          const nextIdx = Math.min(state.activePlateIndex, state.plates.length - 1);
+          navigateToPlate(nextIdx, 'left');
+        }
+        if (modal) modal.style.display = 'none';
+        window.__targetDeleteIndex = null;
+      });
+    };
+
+    // ============================================================
+    // SISTEMA DE ARRASTRE Y CARRUSEL CON DIFERENCIACION TAP VS DRAG
+    // ============================================================
+    const setupCarouselAndGestures = () => {
+      const card = document.getElementById('activePlateCard');
+      const cueOverlay = document.getElementById('gestureCueOverlay');
+      if (!card) return;
+
+      let isDragging = false;
+      let startX = 0;
+      let startY = 0;
+      let currentX = 0;
+      let currentY = 0;
+      let targetProdName = null;
+      let isMinusClick = false;
+      let pointerActive = false;
+      let longPressTimer = null;
+      let didLongPress = false;
+
+      const onPointerDown = (e) => {
+        // En modos MOD y COBRAR, las celdas se seleccionan con tap sin arrastre de carrusel
+        if (state.currentTab !== 'orden') return;
+
+        // Permitir que inputs y botones ejecuten sus eventos nativos
+        if (e.target.tagName === 'INPUT' || e.target.closest('button')) {
+          return;
+        }
+
+        pointerActive = true;
+        startX = e.clientX;
+        startY = e.clientY;
+        currentX = e.clientX;
+        currentY = e.clientY;
+        isDragging = false;
+        didLongPress = false;
+        clearTimeout(longPressTimer);
+
+        // Detectar si el toque empezó sobre un botón de resta o celda de producto
+        const minusTarget = e.target.closest('[data-btn-minus]');
+        if (minusTarget) {
+          isMinusClick = true;
+          targetProdName = minusTarget.dataset.btnMinus;
+        } else {
+          isMinusClick = false;
+          const cellTarget = e.target.closest('[data-prod-name]');
+          targetProdName = cellTarget ? cellTarget.dataset.prodName : null;
+        }
+
+        card.style.transition = 'none';
+
+        // DETECCIÓN DE DEJAR PRESIONADO (LONG-PRESS) PARA "C/ QUESO"
+        if (!isMinusClick && targetProdName) {
+          const isGuisado = state.guisadosCatalog.includes(targetProdName.toUpperCase()) && targetProdName.toUpperCase() !== 'QUESO';
+          if (isGuisado) {
+            longPressTimer = setTimeout(() => {
+              if (!pointerActive || isDragging) return;
+              didLongPress = true;
+
+              const curPlate = state.plates[state.activePlateIndex];
+              if (!curPlate) return;
+
+              const regKey = targetProdName;
+              const quesoKey = `${targetProdName} C/ QUESO`;
+              const regQty = curPlate.items[regKey] || 0;
+              const quesoQty = curPlate.items[quesoKey] || 0;
+              const totalGuisadoQty = regQty + quesoQty;
+
+              // Regla: Si una lleva queso, todas llevan queso para que no se tomen distintas.
+              // Si ya tienen queso (quesoQty > 0): las conmuta todas a regulares sin queso.
+              // Si no tienen queso (quesoQty === 0): las conmuta todas a "C/ QUESO" (o agrega 1 con queso si estaba en 0).
+              if (quesoQty > 0) {
+                delete curPlate.items[quesoKey];
+                curPlate.items[regKey] = totalGuisadoQty;
+              } else {
+                delete curPlate.items[regKey];
+                curPlate.items[quesoKey] = totalGuisadoQty > 0 ? totalGuisadoQty : 1;
+              }
+
+              // Vibración háptica en dispositivos móviles táctiles
+              try { if (navigator.vibrate) navigator.vibrate(50); } catch (_) {}
+
+              const isNowCheese = curPlate.items[quesoKey] > 0;
+              if (cueOverlay) {
+                cueOverlay.textContent = isNowCheese ? `${targetProdName} C/ QUESO` : `${targetProdName} REGULAR`;
+                cueOverlay.className = 'gesture-cue-overlay cue-create';
+                cueOverlay.style.background = isNowCheese ? '#854d0e' : 'var(--swiss-black)';
+                cueOverlay.style.color = isNowCheese ? '#fef08a' : 'var(--swiss-white)';
+                setTimeout(() => {
+                  if (!isDragging && cueOverlay) {
+                    cueOverlay.className = 'gesture-cue-overlay';
+                    cueOverlay.style.background = '';
+                    cueOverlay.style.color = '';
+                  }
+                }, 750);
+              }
+
+              renderActivePlate();
+            }, 420);
+          }
+        }
+      };
+
+      const onPointerMove = (e) => {
+        if (!pointerActive) return;
+
+        currentX = e.clientX;
+        currentY = e.clientY;
+        const dx = currentX - startX;
+        const dy = currentY - startY;
+
+        // Umbral de 8px para distinguir entre toque limpio y arrastre
+        if (!isDragging && Math.hypot(dx, dy) > 8) {
+          isDragging = true;
+          clearTimeout(longPressTimer);
+        }
+
+        if (isDragging) {
+          card.style.transform = `translate(${dx * 0.45}px, ${dy * 0.45}px) rotate(${dx * 0.03}deg)`;
+
+          if (Math.abs(dx) > Math.abs(dy)) {
+            // Predominantemente horizontal:
+            // Deslizar hacia la IZQUIERDA (dx < 0) avanza o crea nueva tarjeta
+            // Deslizar hacia la DERECHA (dx > 0) retrocede a la tarjeta anterior
+            const isLastPlate = state.activePlateIndex === state.plates.length - 1;
+
+            if (dx < -25) {
+              // ARRASTRAR A LA IZQUIERDA: SIGUIENTE PLATO O CREAR NUEVO SI ES LA ÚLTIMA
+              if (isLastPlate) {
+                if (cueOverlay) {
+                  cueOverlay.textContent = '+ NUEVO PLATO';
+                  cueOverlay.className = 'gesture-cue-overlay cue-create';
+                  cueOverlay.style.background = 'var(--swiss-black)';
+                  cueOverlay.style.color = 'var(--swiss-white)';
+                }
+              } else {
+                if (cueOverlay) {
+                  cueOverlay.textContent = 'SIGUIENTE PLATO ->';
+                  cueOverlay.className = 'gesture-cue-overlay cue-create';
+                  cueOverlay.style.background = 'var(--swiss-black)';
+                  cueOverlay.style.color = 'var(--swiss-white)';
+                }
+              }
+            } else if (dx > 25) {
+              // ARRASTRAR A LA DERECHA: RETROCEDER AL ANTERIOR
+              if (state.activePlateIndex > 0) {
+                if (cueOverlay) {
+                  cueOverlay.textContent = '<- PLATO ANTERIOR';
+                  cueOverlay.className = 'gesture-cue-overlay cue-create';
+                  cueOverlay.style.background = 'var(--swiss-black)';
+                  cueOverlay.style.color = 'var(--swiss-white)';
+                }
+              } else {
+                if (cueOverlay) cueOverlay.className = 'gesture-cue-overlay';
+              }
+            } else {
+              if (cueOverlay) cueOverlay.className = 'gesture-cue-overlay';
+            }
+          } else {
+            // Predominantemente vertical: ELIMINAR
+            if (Math.abs(dy) > 25) {
+              if (cueOverlay) {
+                cueOverlay.textContent = 'ELIMINAR PLATO';
+                cueOverlay.className = 'gesture-cue-overlay cue-delete';
+              }
+            } else {
+              if (cueOverlay) cueOverlay.className = 'gesture-cue-overlay';
+            }
+          }
+        }
+      };
+
+      const onPointerUp = (e) => {
+        if (!pointerActive) return;
+        pointerActive = false;
+        clearTimeout(longPressTimer);
+
+        if (didLongPress) {
+          isDragging = false;
+          targetProdName = null;
+          isMinusClick = false;
+          return;
+        }
+
+        const dx = currentX - startX;
+        const dy = currentY - startY;
+
+        if (cueOverlay) cueOverlay.className = 'gesture-cue-overlay';
+
+        if (!isDragging) {
+          // FUE UN TAP LIMPIO (< 8px): AGREGAR O RESTAR PRODUCTO
+          if (targetProdName) {
+            const curPlate = state.plates[state.activePlateIndex];
+            if (curPlate) {
+              const regKey = targetProdName;
+              const quesoKey = `${targetProdName} C/ QUESO`;
+
+              if (isMinusClick) {
+                if ((curPlate.items[quesoKey] || 0) > 0) {
+                  curPlate.items[quesoKey] -= 1;
+                  if (curPlate.items[quesoKey] === 0) delete curPlate.items[quesoKey];
+                } else if ((curPlate.items[regKey] || 0) > 0) {
+                  curPlate.items[regKey] -= 1;
+                  if (curPlate.items[regKey] === 0) delete curPlate.items[regKey];
+                }
+              } else {
+                // Al agregar: Si ya está marcado con queso en este plato, se suma con queso. Si no, regular.
+                if ((curPlate.items[quesoKey] || 0) > 0) {
+                  curPlate.items[quesoKey] = (curPlate.items[quesoKey] || 0) + 1;
+                } else {
+                  curPlate.items[regKey] = (curPlate.items[regKey] || 0) + 1;
+                }
+              }
+              renderActivePlate();
+            }
+          }
+        } else {
+          // FUE UN GESTO DE ARRASTRE (> 8px)
+          if (Math.abs(dx) > Math.abs(dy)) {
+            const isLastPlate = state.activePlateIndex === state.plates.length - 1;
+
+            // ARRASTRAR A LA IZQUIERDA (dx < -35):
+            // - Si es la última de la lista -> AGREGAR NUEVO PLATO
+            // - Si NO es la última -> NAVEGA A LA SIGUIENTE TARJETA
+            if (dx < -35) {
+              if (isLastPlate) {
+                createNewPlate();
+              } else {
+                navigateToPlate(state.activePlateIndex + 1, 'right');
+              }
+            } else if (dx > 35) {
+              // ARRASTRAR A LA DERECHA (dx > 35):
+              // - Navega a la tarjeta anterior si existe
+              if (state.activePlateIndex > 0) {
+                navigateToPlate(state.activePlateIndex - 1, 'left');
+              } else {
+                card.style.transition = 'transform 0.18s cubic-bezier(0.16, 1, 0.3, 1)';
+                card.style.transform = 'translate(0, 0) rotate(0deg)';
+              }
+            } else {
+              card.style.transition = 'transform 0.18s cubic-bezier(0.16, 1, 0.3, 1)';
+              card.style.transform = 'translate(0, 0) rotate(0deg)';
+            }
+          } else {
+            // ARRASTRAR ARRIBA O ABAJO (|dy| > 40): ELIMINAR PLATO
+            if (Math.abs(dy) > 40) {
+              triggerDeletePlate(state.activePlateIndex);
+            } else {
+              card.style.transition = 'transform 0.18s cubic-bezier(0.16, 1, 0.3, 1)';
+              card.style.transform = 'translate(0, 0) rotate(0deg)';
+            }
+          }
+        }
+
+        isDragging = false;
+        targetProdName = null;
+        isMinusClick = false;
+      };
+
+      card.addEventListener('pointerdown', onPointerDown);
+      window.addEventListener('pointermove', onPointerMove);
+      window.addEventListener('pointerup', onPointerUp);
+      window.addEventListener('pointercancel', onPointerUp);
+    };
+
+    // SETUP DE MODALIDAD DEL PEDIDO
+    const setupOrderTypeControl = () => {
+      const container = document.getElementById('orderTypeControl');
+      const blockNombre = document.getElementById('blockNombreCliente');
+      const blockDomicilio = document.getElementById('blockDomicilio');
+
+      container?.querySelectorAll('button[data-type]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          container.querySelectorAll('button').forEach((b) => b.classList.remove('active'));
+          btn.classList.add('active');
+          state.orderType = btn.dataset.type;
+
+          if (state.orderType === 'domicilio') {
+            if (blockNombre) blockNombre.style.display = 'none';
+            if (blockDomicilio) blockDomicilio.style.display = 'flex';
+          } else {
+            if (blockNombre) blockNombre.style.display = 'flex';
+            if (blockDomicilio) blockDomicilio.style.display = 'none';
+          }
+        });
+      });
+    };
+
+    // RESETEAR A MODO NORMAL DE TOMA DE PEDIDO
+    const resetModeToNormal = () => {
+      state.mode = 'normal';
+      state.editingOrderId = null;
+      state.editingFolio = null;
+      state.activeAccountId = null;
+
+      const banner = document.getElementById('activeModeBanner');
+      if (banner) banner.style.display = 'none';
+
+      const customerNameInput = document.getElementById('customerNameInput');
+      if (customerNameInput) {
+        customerNameInput.value = '';
+        customerNameInput.disabled = false;
+      }
+
+      const deliveryAddr = document.getElementById('deliveryAddressInput');
+      if (deliveryAddr) deliveryAddr.value = '';
+      const deliveryPhone = document.getElementById('deliveryPhoneInput');
+      if (deliveryPhone) deliveryPhone.value = '';
+      const deliveryCust = document.getElementById('deliveryCustomerNameInput');
+      if (deliveryCust) {
+        deliveryCust.value = '';
+        deliveryCust.disabled = false;
+      }
+
+      state.plates = [
+        { id: `plate-${Date.now()}`, name: 'PLATO 1', items: {}, notes: '' },
+      ];
+      state.activePlateIndex = 0;
+
+      const submitBtn = document.getElementById('btnSubmitOrder');
+      if (submitBtn) {
+        submitBtn.textContent = 'ENVIAR A COCINA ->';
+      }
+
+      renderActivePlate();
+    };
+
+    // NAVEGACION POR PESTAÑAS (ORDEN, MOD, COBRAR) REUTILIZANDO EL MISMO GRID
+    const switchTab = (tab) => {
+      state.currentTab = tab;
+      renderView();
+    };
+
+    const updateActionFooterForList = (mode, count) => {
+      const totalEl = document.getElementById('displayGrandTotal');
+      const countEl = document.getElementById('displayItemsCount');
+      const submitBtn = document.getElementById('btnSubmitOrder');
+
+      if (mode === 'MOD') {
+        if (totalEl) totalEl.textContent = 'MOD';
+        if (countEl) countEl.textContent = `${count} COMANDA(S) EN COCINA`;
+        if (submitBtn) {
+          submitBtn.textContent = 'VOLVER A TOMAR ORDEN';
+          submitBtn.disabled = false;
+          submitBtn.style.opacity = '1';
+        }
+      } else if (mode === 'COBRAR') {
+        if (totalEl) totalEl.textContent = 'COBRO';
+        if (countEl) countEl.textContent = `${count} CUENTA(S) PENDIENTES`;
+        if (submitBtn) {
+          submitBtn.textContent = 'VOLVER A TOMAR ORDEN';
+          submitBtn.disabled = false;
+          submitBtn.style.opacity = '1';
+        }
+      }
+    };
+
+    // RENDERIZADO PRINCIPAL SEGUN LA PESTAÑA ACTIVA
+    const renderView = () => {
+      const platePillsBar = document.getElementById('platePillsBarContainer');
+      const orderTypeControl = document.getElementById('orderTypeControlContainer');
+      const plateCardControls = document.getElementById('plateCardControls');
+      const plateNoteContainer = document.getElementById('plateNoteInputContainer');
+
+      // Estilos de botones de cabecera
+      const btnOrden = document.getElementById('tabBtnOrden');
+      const btnMod = document.getElementById('tabBtnMod');
+      const btnCobrar = document.getElementById('tabBtnCobrar');
+
+      if (btnOrden) {
+        btnOrden.style.background = state.currentTab === 'orden' ? 'var(--swiss-black)' : 'transparent';
+        btnOrden.style.color = state.currentTab === 'orden' ? 'var(--swiss-white)' : 'var(--swiss-black)';
+      }
+      if (btnMod) {
+        btnMod.style.background = state.currentTab === 'mod' ? 'var(--swiss-black)' : 'transparent';
+        btnMod.style.color = state.currentTab === 'mod' ? 'var(--swiss-white)' : 'var(--swiss-black)';
+      }
+      if (btnCobrar) {
+        btnCobrar.style.background = state.currentTab === 'cobrar' ? 'var(--swiss-black)' : 'transparent';
+        btnCobrar.style.color = state.currentTab === 'cobrar' ? 'var(--swiss-white)' : 'var(--swiss-black)';
+      }
+
+      if (state.currentTab === 'orden') {
+        if (platePillsBar) platePillsBar.style.display = 'flex';
+        if (orderTypeControl) orderTypeControl.style.display = 'block';
+        if (plateCardControls) plateCardControls.style.display = 'flex';
+        if (plateNoteContainer) plateNoteContainer.style.display = 'block';
+        renderActivePlate();
+      } else if (state.currentTab === 'mod') {
+        if (platePillsBar) platePillsBar.style.display = 'none';
+        if (orderTypeControl) orderTypeControl.style.display = 'none';
+        if (plateCardControls) plateCardControls.style.display = 'none';
+        if (plateNoteContainer) plateNoteContainer.style.display = 'none';
+        renderModGrid();
+      } else if (state.currentTab === 'cobrar') {
+        if (platePillsBar) platePillsBar.style.display = 'none';
+        if (orderTypeControl) orderTypeControl.style.display = 'none';
+        if (plateCardControls) plateCardControls.style.display = 'none';
+        if (plateNoteContainer) plateNoteContainer.style.display = 'none';
+        renderCobrarGrid();
+      }
+    };
+
+    // RENDERIZADO DEL GRID PARA MOD: REUTILIZA EL GRID CON NOMBRE DE CLIENTE Y PREVIEW
+    const renderModGrid = async () => {
+      const grid = document.getElementById('productsAutogenGrid');
+      const titleEl = document.getElementById('currentPlateTitle');
+      const badgeEl = document.getElementById('currentPlateBadge');
+      if (!grid) return;
+
+      grid.innerHTML = '<div style="display:flex; align-items:center; justify-content:center; height:100%; width:100%; font-weight:800; color:#71717a; grid-column:1/-1;">CARGANDO COMANDAS...</div>';
+
+      try {
+        const res = await fetch('/api/orders');
+        const allOrders = await res.json();
+        const activeOrders = allOrders.filter((o) => o.status !== 'cancelado' && o.accountClosed !== true);
+
+        if (titleEl) titleEl.textContent = 'MODIFICAR / AGREGAR COMANDAS';
+        if (badgeEl) badgeEl.textContent = `${activeOrders.length} ACTIVAS`;
+
+        if (activeOrders.length === 0) {
+          grid.style.setProperty('--grid-cols', 1);
+          grid.style.setProperty('--grid-rows', 1);
+          grid.innerHTML = '<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; width:100%; font-weight:900; color:#71717a; grid-column:1/-1; text-align:center;">NO HAY COMANDAS ACTIVAS EN ESTE MOMENTO.</div>';
+          updateActionFooterForList('MOD', 0);
+          return;
+        }
+
+        // Cálculo autogenerativo para abarcar el espacio
+        const count = activeOrders.length;
+        let cols = 2;
+        let rows = Math.ceil(count / 2);
+        if (count <= 2) { cols = 2; rows = 1; }
+        else if (count <= 4) { cols = 2; rows = 2; }
+        else if (count <= 6) { cols = 2; rows = 3; }
+        else { cols = 3; rows = Math.ceil(count / 3); }
+
+        grid.style.setProperty('--grid-cols', cols);
+        grid.style.setProperty('--grid-rows', rows);
+
+        // Cada celda tiene solo el nombre del cliente, preview de lo que pidió y botones de acción directos
+        grid.innerHTML = activeOrders
+          .map((order) => {
+            const preview = (order.items || [])
+              .map((it) => `${it.quantity} ${it.name}`)
+              .join(', ');
+
+            const canModify = order.status !== 'terminado';
+            const statusText = order.status === 'terminado' ? 'TERMINADA' : order.status.toUpperCase();
+            const statusBg = order.status === 'terminado' ? '#bbf7d0' : (order.status === 'en_preparacion' ? '#fef08a' : 'var(--swiss-gray-200)');
+            const statusColor = order.status === 'terminado' ? '#166534' : (order.status === 'en_preparacion' ? '#854d0e' : 'var(--swiss-black)');
+
+            return `
+              <div class="product-cell" data-mod-card-id="${order.id}" style="cursor: pointer; justify-content: space-between; padding: 0.65rem;">
+                <div>
+                  <div class="row between" style="align-items: flex-start; margin-bottom: 0.25rem;">
+                    <span style="font-weight: 900; font-size: 0.85rem; color: var(--swiss-black);">
+                      #${order.folio}
+                    </span>
+                    <span class="badge" style="background: ${statusBg}; color: ${statusColor}; font-size: 0.65rem;">
+                      ${statusText}
+                    </span>
+                  </div>
+                  <div class="product-cell-name" style="font-size: 0.95rem; font-weight: 900; text-transform: uppercase;">
+                    ${order.customerName || 'CLIENTE'}
+                  </div>
+                  <div style="font-size: 0.75rem; color: var(--swiss-gray-700); font-weight: 600; line-height: 1.25; margin-top: 0.25rem;">
+                    ${preview || 'Sin productos'}
+                  </div>
+                </div>
+
+                <div class="row" style="gap: 0.35rem; margin-top: 0.5rem; padding-top: 0.4rem; border-top: 1px solid var(--swiss-gray-200);">
+                  ${canModify ? `
+                    <button type="button" class="btn secondary" data-mod-btn-id="${order.id}" style="flex: 1; min-height: 32px; padding: 0.2rem 0.3rem; font-size: 0.72rem; font-weight: 900; border-color: var(--swiss-black);">
+                      MODIFICAR
+                    </button>
+                  ` : `
+                    <div style="flex: 1; font-size: 0.68rem; font-weight: 800; color: #166534; background: #bbf7d0; display: flex; align-items: center; justify-content: center; border-radius: 3px; min-height: 32px; text-align: center; line-height: 1.1;">
+                      TERMINADA
+                    </div>
+                  `}
+                  <button type="button" class="btn primary" data-add-btn-id="${order.id}" style="flex: 1; min-height: 32px; padding: 0.2rem 0.3rem; font-size: 0.72rem; font-weight: 900;">
+                    + AGREGAR
+                  </button>
+                </div>
+              </div>
+            `;
+          })
+          .join('');
+
+        updateActionFooterForList('MOD', activeOrders.length);
+
+        // Delegación de eventos en el grid de MOD
+        grid.onclick = (e) => {
+          const modBtn = e.target.closest('[data-mod-btn-id]');
+          if (modBtn) {
+            e.stopPropagation();
+            const order = activeOrders.find((o) => o.id === modBtn.dataset.modBtnId);
+            if (order) startModifyingOrder(order);
+            return;
+          }
+
+          const addBtn = e.target.closest('[data-add-btn-id]');
+          if (addBtn) {
+            e.stopPropagation();
+            const order = activeOrders.find((o) => o.id === addBtn.dataset.addBtnId);
+            if (order) startAddingToAccount(order);
+            return;
+          }
+
+          const card = e.target.closest('[data-mod-card-id]');
+          if (card) {
+            const order = activeOrders.find((o) => o.id === card.dataset.modCardId);
+            if (!order) return;
+            if (order.status === 'terminado') {
+              alert('Esta comanda ya fue terminada por cocina y no puede modificarse. Usa el botón "+ AGREGAR" para crear una nueva comanda en su cuenta.');
+            } else {
+              startModifyingOrder(order);
+            }
+          }
+        };
+
+      } catch (e) {
+        grid.innerHTML = '<div style="color:var(--swiss-red); font-weight:900; text-align:center;">ERROR AL CARGAR COMANDAS</div>';
+      }
+    };
+
+    const startModifyingOrder = (targetOrder) => {
+      state.mode = 'modifying';
+      state.editingOrderId = targetOrder.id;
+      state.editingFolio = targetOrder.folio;
+      state.activeAccountId = targetOrder.accountId || targetOrder.id;
+      state.customerName = targetOrder.customerName || '';
+      state.orderType = targetOrder.orderType || 'aqui';
+
+      // Sincronizar UI de tipo de pedido
+      const typeCtrl = document.getElementById('orderTypeControl');
+      typeCtrl?.querySelectorAll('button').forEach((b) => {
+        b.classList.toggle('active', b.dataset.type === state.orderType);
+      });
+
+      const blockNombre = document.getElementById('blockNombreCliente');
+      const blockDomicilio = document.getElementById('blockDomicilio');
+      if (state.orderType === 'domicilio') {
+        if (blockNombre) blockNombre.style.display = 'none';
+        if (blockDomicilio) blockDomicilio.style.display = 'flex';
+        if (document.getElementById('deliveryAddressInput')) document.getElementById('deliveryAddressInput').value = targetOrder.address || '';
+        if (document.getElementById('deliveryPhoneInput')) document.getElementById('deliveryPhoneInput').value = targetOrder.phone || '';
+        if (document.getElementById('deliveryCustomerNameInput')) document.getElementById('deliveryCustomerNameInput').value = targetOrder.customerName || '';
+      } else {
+        if (blockNombre) blockNombre.style.display = 'flex';
+        if (blockDomicilio) blockDomicilio.style.display = 'none';
+        const custInput = document.getElementById('customerNameInput');
+        if (custInput) {
+          custInput.value = targetOrder.customerName || '';
+          custInput.disabled = false;
+        }
+      }
+
+      // Cargar platos con nombres normalizados a MAYÚSCULAS
+      if (targetOrder.plates && targetOrder.plates.length > 0) {
+        state.plates = targetOrder.plates.map((p, idx) => {
+          const itemsObj = {};
+          (p.items || []).forEach((it) => {
+            const normName = it.name.trim().toUpperCase();
+            itemsObj[normName] = (itemsObj[normName] || 0) + it.quantity;
+          });
+          return {
+            id: p.id || `plate-${idx + 1}`,
+            name: p.name || `PLATO ${idx + 1}`,
+            items: itemsObj,
+            notes: p.notes || '',
+          };
+        });
+      } else {
+        const itemsObj = {};
+        (targetOrder.items || []).forEach((it) => {
+          const normName = it.name.trim().toUpperCase();
+          itemsObj[normName] = (itemsObj[normName] || 0) + it.quantity;
+        });
+        state.plates = [{ id: 'plate-1', name: 'PLATO 1', items: itemsObj, notes: targetOrder.notes || '' }];
+      }
+
+      // Asegurar que todos los guisados base de la comanda existan en el catálogo para ser visibles
+      state.plates.forEach((p) => {
+        Object.keys(p.items).forEach((name) => {
+          const isDrink = state.drinksCatalog.some((d) => d.name.toUpperCase() === name.toUpperCase());
+          const baseName = name.replace(/\s+C\/\s+QUESO$/i, '').trim();
+          if (!isDrink && !state.guisadosCatalog.includes(baseName)) {
+            state.guisadosCatalog.push(baseName);
+          }
+        });
+      });
+
+      state.activePlateIndex = 0;
+
+      const banner = document.getElementById('activeModeBanner');
+      const bannerText = document.getElementById('activeModeBannerText');
+      if (banner) {
+        banner.style.display = 'flex';
+        banner.style.background = 'var(--swiss-black)';
+        banner.style.color = 'var(--swiss-white)';
+      }
+      if (bannerText) {
+        bannerText.textContent = `MODIFICANDO COMANDA #${targetOrder.folio} · ${targetOrder.customerName || 'CLIENTE'} (EN COCINA)`;
+      }
+
+      switchTab('orden');
+    };
+
+    const startAddingToAccount = (targetOrder) => {
+      state.mode = 'adding_to_account';
+      state.editingOrderId = null;
+      state.editingFolio = null;
+      state.activeAccountId = targetOrder.accountId || targetOrder.id;
+      state.customerName = targetOrder.customerName || '';
+      state.orderType = targetOrder.orderType || 'aqui';
+
+      const typeCtrl = document.getElementById('orderTypeControl');
+      typeCtrl?.querySelectorAll('button').forEach((b) => {
+        b.classList.toggle('active', b.dataset.type === state.orderType);
+      });
+
+      const blockNombre = document.getElementById('blockNombreCliente');
+      const blockDomicilio = document.getElementById('blockDomicilio');
+      if (state.orderType === 'domicilio') {
+        if (blockNombre) blockNombre.style.display = 'none';
+        if (blockDomicilio) blockDomicilio.style.display = 'flex';
+        if (document.getElementById('deliveryAddressInput')) document.getElementById('deliveryAddressInput').value = targetOrder.address || '';
+        if (document.getElementById('deliveryPhoneInput')) document.getElementById('deliveryPhoneInput').value = targetOrder.phone || '';
+        if (document.getElementById('deliveryCustomerNameInput')) {
+          const el = document.getElementById('deliveryCustomerNameInput');
+          el.value = targetOrder.customerName || '';
+          el.disabled = true;
+        }
+      } else {
+        if (blockNombre) blockNombre.style.display = 'flex';
+        if (blockDomicilio) blockDomicilio.style.display = 'none';
+        const custInput = document.getElementById('customerNameInput');
+        if (custInput) {
+          custInput.value = targetOrder.customerName || '';
+          custInput.disabled = true;
+        }
+      }
+
+      state.plates = [
+        { id: `plate-${Date.now()}`, name: 'PLATO 1', items: {}, notes: '' },
+      ];
+      state.activePlateIndex = 0;
+
+      const banner = document.getElementById('activeModeBanner');
+      const bannerText = document.getElementById('activeModeBannerText');
+      if (banner) {
+        banner.style.display = 'flex';
+        banner.style.background = '#0284c7';
+        banner.style.color = 'var(--swiss-white)';
+      }
+      if (bannerText) {
+        bannerText.textContent = `AGREGANDO A CUENTA: ${targetOrder.customerName || 'CLIENTE'} (NUEVA TARJETA EN COCINA)`;
+      }
+
+      switchTab('orden');
+    };
+
+    // RENDERIZADO DEL GRID PARA COBRAR: REUTILIZA EL GRID CON NOMBRE DE CLIENTE Y PREVIEW
+    const renderCobrarGrid = async () => {
+      const grid = document.getElementById('productsAutogenGrid');
+      const titleEl = document.getElementById('currentPlateTitle');
+      const badgeEl = document.getElementById('currentPlateBadge');
+      if (!grid) return;
+
+      grid.innerHTML = '<div style="display:flex; align-items:center; justify-content:center; height:100%; width:100%; font-weight:800; color:#71717a; grid-column:1/-1;">CARGANDO CUENTAS...</div>';
+
+      try {
+        const res = await fetch('/api/accounts');
+        const accounts = await res.json();
+
+        if (titleEl) titleEl.textContent = 'SELECCIONA CUENTA PARA COBRAR';
+        if (badgeEl) badgeEl.textContent = `${accounts.length} CUENTAS`;
+
+        if (accounts.length === 0) {
+          grid.style.setProperty('--grid-cols', 1);
+          grid.style.setProperty('--grid-rows', 1);
+          grid.innerHTML = '<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; width:100%; font-weight:900; color:#71717a; grid-column:1/-1; text-align:center;">NO HAY CUENTAS PENDIENTES DE COBRO.</div>';
+          updateActionFooterForList('COBRAR', 0);
+          return;
+        }
+
+        const count = accounts.length;
+        let cols = 2;
+        let rows = Math.ceil(count / 2);
+        if (count <= 2) { cols = 2; rows = 1; }
+        else if (count <= 4) { cols = 2; rows = 2; }
+        else if (count <= 6) { cols = 2; rows = 3; }
+        else { cols = 3; rows = Math.ceil(count / 3); }
+
+        grid.style.setProperty('--grid-cols', cols);
+        grid.style.setProperty('--grid-rows', rows);
+
+        // Cada celda tiene solo el nombre del cliente y un preview de lo que pidió
+        grid.innerHTML = accounts
+          .map((acc) => {
+            const allItemsMap = {};
+            (acc.orders || []).forEach((o) => {
+              (o.items || []).forEach((it) => {
+                allItemsMap[it.name] = (allItemsMap[it.name] || 0) + it.quantity;
+              });
+            });
+            const preview = Object.entries(allItemsMap)
+              .map(([name, qty]) => `${qty} ${name}`)
+              .join(', ');
+
+            return `
+              <div class="product-cell" data-cobrar-acc-id="${acc.accountId}" style="cursor: pointer; justify-content: space-between; padding: 0.65rem;">
+                <div>
+                  <div class="row between" style="align-items: flex-start; margin-bottom: 0.25rem;">
+                    <span style="font-weight: 900; font-size: 0.85rem; color: var(--swiss-black);">
+                      CUENTA
+                    </span>
+                    <span class="badge" style="background: var(--swiss-red); color: #fff; font-weight: 900; font-size: 0.65rem;">
+                      COBRAR
+                    </span>
+                  </div>
+                  <div class="product-cell-name" style="font-size: 0.95rem; font-weight: 900; text-transform: uppercase;">
+                    ${acc.customerName || 'COMENSAL'}
+                  </div>
+                  <div style="font-size: 0.75rem; color: var(--swiss-gray-700); font-weight: 600; line-height: 1.25; margin-top: 0.25rem;">
+                    ${preview || 'Sin productos'}
+                  </div>
+                </div>
+                <div class="product-cell-footer" style="margin-top: 0.4rem; padding-top: 0.35rem; border-top: 1px solid var(--swiss-gray-200);">
+                  <span style="font-weight: 900; font-size: 1.05rem; color: var(--swiss-black);">$${acc.totalAmount}</span>
+                  <button type="button" class="btn primary" style="min-height: 28px; padding: 0.15rem 0.5rem; font-size: 0.72rem; font-weight: 900;">
+                    COBRAR
+                  </button>
+                </div>
+              </div>
+            `;
+          })
+          .join('');
+
+        updateActionFooterForList('COBRAR', accounts.length);
+
+        grid.onclick = (e) => {
+          const card = e.target.closest('[data-cobrar-acc-id]');
+          if (card) {
+            const accId = card.dataset.cobrarAccId;
+            const targetAcc = accounts.find((a) => a.accountId === accId);
+            if (targetAcc) showCobrarConfirmModal(targetAcc);
+          }
+        };
+
+      } catch (e) {
+        grid.innerHTML = '<div style="color:var(--swiss-red); font-weight:900; text-align:center;">ERROR AL CARGAR CUENTAS</div>';
+      }
+    };
+
+    // MODAL DE CONFIRMACION DE COBRO
+    const showCobrarConfirmModal = (targetAcc) => {
+      const modal = document.getElementById('cobrarConfirmModal');
+      const title = document.getElementById('cobrarModalTitle');
+      const body = document.getElementById('cobrarModalBody');
+      const btnConfirm = document.getElementById('btnConfirmCobrar');
+      const btnCancel = document.getElementById('btnCancelCobrar');
+
+      if (title) title.textContent = `COBRAR · ${targetAcc.customerName || 'COMENSAL'}`;
+
+      const allItemsMap = {};
+      (targetAcc.orders || []).forEach((o) => {
+        (o.items || []).forEach((it) => {
+          allItemsMap[it.name] = (allItemsMap[it.name] || 0) + it.quantity;
+        });
+      });
+      const preview = Object.entries(allItemsMap)
+        .map(([name, qty]) => `${qty} ${name}`)
+        .join(', ');
+
+      if (body) {
+        body.innerHTML = `
+          <div style="font-size: 1.35rem; font-weight: 900; margin-bottom: 0.4rem; color: var(--swiss-black);">
+            TOTAL: $${targetAcc.totalAmount}
+          </div>
+          <div style="font-size: 0.82rem; color: var(--swiss-gray-700); margin-bottom: 0.35rem;">
+            <strong>CONSUMO:</strong> ${preview}
+          </div>
+          <div style="font-size: 0.72rem; color: var(--swiss-gray-500);">
+            ${targetAcc.ordersCount} comanda(s) en esta cuenta. Al confirmar, la cuenta quedará cerrada.
+          </div>
+        `;
+      }
+
+      if (btnConfirm) {
+        btnConfirm.onclick = async () => {
+          btnConfirm.disabled = true;
+          try {
+            const res = await fetch('/api/accounts', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ accountId: targetAcc.accountId }),
+            });
+            if (res.ok) {
+              alert(`CUENTA DE ${targetAcc.customerName || 'COMENSAL'} COBRADA ($${targetAcc.totalAmount})`);
+              if (modal) modal.style.display = 'none';
+              renderCobrarGrid();
+            } else {
+              alert('ERROR AL CERRAR LA CUENTA');
+            }
+          } catch (e) {
+            alert('ERROR DE CONEXION');
+          } finally {
+            btnConfirm.disabled = false;
+          }
+        };
+      }
+
+      if (btnCancel) {
+        btnCancel.onclick = () => {
+          if (modal) modal.style.display = 'none';
+        };
+      }
+
+      if (modal) modal.style.display = 'flex';
+    };
+
+    // BOTON INFERIOR PRINCIPAL: DISPATCHER UNIFICADO SEGUN PESTAÑA
+    const handleMainSubmitClick = () => {
+      if (state.currentTab !== 'orden') {
+        switchTab('orden');
+        return;
+      }
+      submitOrder();
+    };
+
+    // ENVIAR COMANDA A COCINA / GUARDAR MODIFICACION / AGREGAR A CUENTA
+    const submitOrder = async () => {
+      if (state.isSubmitting) return;
+
+      const calc = calculateTotals();
+      if (calc.totalItems === 0) {
+        alert('DEBES SELECCIONAR AL MENOS UN PRODUCTO.');
+        return;
+      }
+
+      const submitBtn = document.getElementById('btnSubmitOrder');
+
+      let customerNameVal = '';
+      let addressVal = '';
+      let phoneVal = '';
+
+      if (state.orderType === 'domicilio') {
+        addressVal = document.getElementById('deliveryAddressInput')?.value?.trim() || '';
+        phoneVal = document.getElementById('deliveryPhoneInput')?.value?.trim() || '';
+        customerNameVal = document.getElementById('deliveryCustomerNameInput')?.value?.trim() || '';
+
+        if (!addressVal || addressVal.length < 5) {
+          alert('LA DIRECCION DE ENTREGA ES OBLIGATORIA.');
+          document.getElementById('deliveryAddressInput')?.focus();
+          return;
+        }
+      } else {
+        customerNameVal = document.getElementById('customerNameInput')?.value?.trim() || '';
+        if (!customerNameVal) {
+          customerNameVal = state.orderType === 'aqui' ? 'COMENSAL SALA' : 'CLIENTE MOSTRADOR';
+        }
+      }
+
+      const cleanedPlates = state.plates
+        .map((p) => {
+          const itemsArray = [];
+          for (const [name, qty] of Object.entries(p.items)) {
+            if (qty > 0) {
+              const drink = state.drinksCatalog.find((d) => d.name.toUpperCase() === name.toUpperCase());
+              itemsArray.push({
+                kind: drink ? 'bebida' : 'guisado',
+                name: name.toUpperCase(),
+                quantity: qty,
+              });
+            }
+          }
+          return {
+            id: p.id,
+            name: p.name,
+            items: itemsArray,
+            notes: p.notes || '',
+          };
+        })
+        .filter((p) => p.items.length > 0);
+
+      if (cleanedPlates.length === 0) {
+        alert('EL PEDIDO DEBE TENER AL MENOS UN PRODUCTO EN ALGÚN PLATO.');
+        return;
+      }
+
+      state.isSubmitting = true;
+      if (submitBtn) submitBtn.disabled = true;
+
+      try {
+        // 1. MODO MODIFICAR COMANDA EXISTENTE
+        if (state.mode === 'modifying') {
+          const res = await fetch(`/api/orders/${state.editingOrderId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              customerName: customerNameVal,
+              plates: cleanedPlates,
+            }),
+          });
+
+          if (res.ok) {
+            alert(`COMANDA #${state.editingFolio} MODIFICADA CON ÉXITO EN COCINA.`);
+            resetModeToNormal();
+          } else {
+            const err = await res.json();
+            alert(err.error || 'ERROR AL MODIFICAR COMANDA');
+          }
+          return;
+        }
+
+        // 2. MODO AGREGAR A LA CUENTA (NUEVA TARJETA EN COCINA)
+        if (state.mode === 'adding_to_account') {
+          const payload = {
+            orderType: state.orderType,
+            customerName: state.customerName || customerNameVal,
+            accountId: state.activeAccountId,
+            address: addressVal,
+            phone: phoneVal,
+            plates: cleanedPlates,
+          };
+
+          const res = await fetch('/api/orders', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            alert(`TARJETA #${data.order.folio} AGREGADA A LA CUENTA Y ENVIADA A COCINA`);
+            resetModeToNormal();
+          } else {
+            const err = await res.json();
+            alert(err.error || 'ERROR AL ENVIAR AGREGADO');
+          }
+          return;
+        }
+
+        // 3. MODO NORMAL (NUEVA COMANDA)
+        const payload = {
+          orderType: state.orderType,
+          customerName: customerNameVal,
+          address: addressVal,
+          phone: phoneVal,
+          plates: cleanedPlates,
+        };
+
+        const res = await fetch('/api/orders', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          alert(`COMANDA #${data.order.folio} ENVIADA A COCINA`);
+          resetModeToNormal();
+        } else {
+          const err = await res.json();
+          alert(err.error || 'ERROR AL ENVIAR COMANDA');
+        }
+      } catch (err) {
+        console.error(err);
+        alert('ERROR DE CONEXION CON EL SERVIDOR');
+      } finally {
+        state.isSubmitting = false;
+        if (submitBtn) submitBtn.disabled = false;
+      }
+    };
+
+    // WALKIE TALKIE SIN EMOJIS
+    let mediaRecorder = null;
+    let audioChunks = [];
+    let wtTimerInterval = null;
+    let wtStartTime = 0;
+
+    const setupWalkieTalkie = () => {
+      const wtBtn = document.getElementById('wtButton');
+      const wtLabel = document.getElementById('wtLabel');
+      const wtTimer = document.getElementById('wtTimer');
+      const banner = document.getElementById('incomingAudioBanner');
+      const replayBtn = document.getElementById('replayAudioBtn');
+      const dismissBtn = document.getElementById('dismissAudioBtn');
+
+      if (!wtBtn) return;
+
+      // ============================================================
+      // ARQUITECTURA DE AUDIO EN SEGUNDO PLANO Y PANTALLA APAGADA
+      // (Continuous Carrier Loop + MediaSession API + Reused Audio Element)
+      // ============================================================
+
+      // Generador de audio portador continuo (PCM WAV 16-bit con micro-dither no audible)
+      // para evitar que el modo ahorro de iOS/Android suspenda el hardware de audio
+      const createSilentCarrierUri = () => {
+        try {
+          const sampleRate = 8000;
+          const numSamples = sampleRate * 2;
+          const buffer = new ArrayBuffer(44 + numSamples * 2);
+          const view = new DataView(buffer);
+          view.setUint32(0, 0x52494646, false); // RIFF
+          view.setUint32(4, 36 + numSamples * 2, true);
+          view.setUint32(8, 0x57415645, false); // WAVE
+          view.setUint32(12, 0x666d7420, false); // fmt
+          view.setUint32(16, 16, true);
+          view.setUint16(20, 1, true); // PCM
+          view.setUint16(22, 1, true); // Mono
+          view.setUint32(24, sampleRate, true);
+          view.setUint32(28, sampleRate * 2, true);
+          view.setUint16(32, 2, true);
+          view.setUint16(34, 16, true);
+          view.setUint32(36, 0x64617461, false); // data
+          view.setUint32(40, numSamples * 2, true);
+          for (let i = 0; i < numSamples; i++) {
+            view.setInt16(44 + i * 2, (i % 2 === 0) ? 2 : -2, true);
+          }
+          const blob = new Blob([buffer], { type: 'audio/wav' });
+          return URL.createObjectURL(blob);
+        } catch (_) {
+          return 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==';
+        }
+      };
+
+      const carrierUri = createSilentCarrierUri();
+      let persistentAudio = null;
+      let isCarrierActive = false;
+      const voiceQueue = [];
+      let isPlayingVoice = false;
+
+      // Inicializar el elemento de audio persistente reutilizable
+      const getPersistentAudio = () => {
+        if (!persistentAudio) {
+          persistentAudio = new Audio();
+          persistentAudio.playsInline = true;
+          persistentAudio.setAttribute('playsinline', '');
+          persistentAudio.setAttribute('webkit-playsinline', '');
+        }
+        return persistentAudio;
+      };
+
+      const resumeCarrier = () => {
+        if (isPlayingVoice) return;
+        const audio = getPersistentAudio();
+        try {
+          audio.pause();
+          audio.onended = null;
+          audio.onerror = null;
+          audio.src = carrierUri;
+          audio.loop = true;
+          audio.volume = 0.02; // Inaudible pero activo para el hardware del OS
+          audio.play().catch(() => {});
+          isCarrierActive = true;
+
+          if ('mediaSession' in navigator) {
+            navigator.mediaSession.metadata = new MediaMetadata({
+              title: 'Walkie-Talkie Activo',
+              artist: 'Cocina & Meseros',
+              album: 'Canal en Tiempo Real',
+            });
+            navigator.mediaSession.playbackState = 'playing';
+          }
+        } catch (_) {}
+      };
+
+      const playNextVoiceInQueue = () => {
+        if (voiceQueue.length === 0) {
+          isPlayingVoice = false;
+          resumeCarrier();
+          return;
+        }
+
+        isPlayingVoice = true;
+        const item = voiceQueue.shift();
+        const audio = getPersistentAudio();
+
+        if (banner) {
+          banner.style.display = 'flex';
+          const bannerText = document.getElementById('incomingAudioText');
+          if (bannerText) bannerText.textContent = `MENSAJE DE VOZ DE ${item.sender.toUpperCase()}`;
+        }
+
+        if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+          try {
+            new Notification(`Walkie-Talkie · ${item.sender.toUpperCase()}`, {
+              body: 'Nuevo mensaje de voz recibido de Cocina',
+              tag: 'walkie-voice',
+            });
+          } catch (_) {}
+        }
+
+        if ('mediaSession' in navigator) {
+          navigator.mediaSession.metadata = new MediaMetadata({
+            title: `Mensaje de ${item.sender.toUpperCase()}`,
+            artist: 'Las Gordibuenas Walkie',
+            album: 'Canal de Audio',
+          });
+          navigator.mediaSession.playbackState = 'playing';
+        }
+
+        try {
+          audio.pause();
+          audio.loop = false;
+          audio.src = item.audioData;
+          audio.volume = 1.0; // Máximo volumen para el mensaje
+          audio.onended = () => {
+            playNextVoiceInQueue();
+          };
+          audio.onerror = () => {
+            playNextVoiceInQueue();
+          };
+          const p = audio.play();
+          if (p) {
+            p.catch((err) => {
+              console.warn('Fallo play en background:', err);
+              playNextVoiceInQueue();
+            });
+          }
+        } catch (e) {
+          playNextVoiceInQueue();
+        }
+      };
+
+      const queueVoiceMessage = (audioData, sender) => {
+        voiceQueue.push({ audioData, sender });
+        if (!isPlayingVoice) {
+          playNextVoiceInQueue();
+        }
+      };
+
+      // Desbloqueo del canal de audio por gesto del usuario
+      const initBackgroundAudio = () => {
+        if (isCarrierActive) return;
+        getPersistentAudio();
+        resumeCarrier();
+
+        if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+          Notification.requestPermission().catch(() => {});
+        }
+
+        if ('wakeLock' in navigator && document.visibilityState === 'visible') {
+          navigator.wakeLock.request('screen').catch(() => {});
+        }
+
+        if ('mediaSession' in navigator) {
+          navigator.mediaSession.setActionHandler('play', () => resumeCarrier());
+          navigator.mediaSession.setActionHandler('pause', () => {});
+        }
+      };
+
+      document.addEventListener('pointerdown', initBackgroundAudio, { once: true });
+      document.addEventListener('touchstart', initBackgroundAudio, { once: true });
+
+      // GRABACIÓN DE AUDIO (COMPATIBLE CON IOS MP4 Y ANDROID WEBM)
+      let selectedMime = '';
+      if (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported) {
+        if (MediaRecorder.isTypeSupported('audio/mp4')) {
+          selectedMime = 'audio/mp4';
+        } else if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+          selectedMime = 'audio/webm;codecs=opus';
+        } else if (MediaRecorder.isTypeSupported('audio/webm')) {
+          selectedMime = 'audio/webm';
+        }
+      }
+
+      const startRecording = async () => {
+        if (state.isRecordingWT) return;
+        initBackgroundAudio();
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          audioChunks = [];
+          mediaRecorder = selectedMime
+            ? new MediaRecorder(stream, { mimeType: selectedMime })
+            : new MediaRecorder(stream);
+
+          mediaRecorder.ondataavailable = (e) => {
+            if (e.data.size > 0) audioChunks.push(e.data);
+          };
+
+          mediaRecorder.onstop = async () => {
+            stream.getTracks().forEach((t) => t.stop());
+            clearInterval(wtTimerInterval);
+            if (wtTimer) wtTimer.style.display = 'none';
+
+            if (audioChunks.length === 0) {
+              resumeCarrier();
+              return;
+            }
+            const mimeType = mediaRecorder.mimeType || selectedMime || 'audio/webm';
+            const audioBlob = new Blob(audioChunks, { type: mimeType });
+            if (audioBlob.size < 500) {
+              resumeCarrier();
+              return;
+            }
+
+            const reader = new FileReader();
+            reader.readAsDataURL(audioBlob);
+            reader.onloadend = async () => {
+              const base64Data = reader.result;
+              try {
+                await fetch('/api/audio', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    sender: 'Mesero',
+                    audioData: base64Data,
+                    duration: Math.round((Date.now() - wtStartTime) / 1000),
+                  }),
+                });
+              } catch (err) {
+                console.error(err);
+              } finally {
+                resumeCarrier();
+              }
+            };
+          };
+
+          if (persistentAudio && !isPlayingVoice) {
+            persistentAudio.pause();
+          }
+
+          mediaRecorder.start();
+          state.isRecordingWT = true;
+          wtStartTime = Date.now();
+          wtBtn.classList.add('recording');
+          if (wtLabel) wtLabel.textContent = 'TRANSMITIENDO';
+          if (wtTimer) {
+            wtTimer.style.display = 'inline';
+            wtTimer.textContent = '0:01';
+            wtTimerInterval = setInterval(() => {
+              const secs = Math.floor((Date.now() - wtStartTime) / 1000);
+              wtTimer.textContent = `0:${secs < 10 ? '0' : ''}${secs}`;
+            }, 500);
+          }
+        } catch (err) {
+          alert('AUTORIZA EL PERMISO DE MICROFONO.');
+        }
+      };
+
+      const stopRecording = () => {
+        if (!state.isRecordingWT) return;
+        state.isRecordingWT = false;
+        wtBtn.classList.remove('recording');
+        if (wtLabel) wtLabel.textContent = 'WALKIE';
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+      };
+
+      // PUSH-TO-TALK
+      wtBtn.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        try { wtBtn.setPointerCapture(e.pointerId); } catch (_) {}
+        startRecording();
+      });
+
+      const handlePointerRelease = () => {
+        if (state.isRecordingWT) {
+          stopRecording();
+        }
+      };
+
+      wtBtn.addEventListener('pointerup', handlePointerRelease);
+      wtBtn.addEventListener('pointercancel', handlePointerRelease);
+      wtBtn.addEventListener('contextmenu', (e) => e.preventDefault());
+
+      // SETUP DE SSE PARA RECEPCIÓN INSTANTÁNEA EN SEGUNDO PLANO CON RECONEXIÓN
+      let audioEventSource = null;
+      const connectAudioSSE = () => {
+        try {
+          if (audioEventSource) audioEventSource.close();
+          const sinceParam = state.lastAudioTimestamp ? `?since=${state.lastAudioTimestamp}` : '';
+          audioEventSource = new EventSource(`/api/audio/stream${sinceParam}`);
+
+          audioEventSource.onmessage = (e) => {
+            try {
+              const msg = JSON.parse(e.data);
+              if (msg && msg.sender === 'Cocina' && msg.id) {
+                if (state.playedAudioIds.has(msg.id)) return;
+                state.playedAudioIds.add(msg.id);
+                state.lastAudioTimestamp = msg.timestamp || Date.now();
+                state.lastPlayedAudioData = msg.audioData;
+
+                queueVoiceMessage(msg.audioData, msg.sender);
+              }
+            } catch (_) {}
+          };
+
+          audioEventSource.onerror = () => {
+            if (audioEventSource) audioEventSource.close();
+            setTimeout(connectAudioSSE, 2500);
+          };
+        } catch (_) {}
+      };
+      connectAudioSSE();
+
+      replayBtn?.addEventListener('click', () => {
+        if (state.lastPlayedAudioData) {
+          queueVoiceMessage(state.lastPlayedAudioData, 'Cocina');
+        }
+      });
+
+      dismissBtn?.addEventListener('click', () => {
+        if (banner) banner.style.display = 'none';
+      });
+    };
+
+    // INICIALIZACION
+    const init = async () => {
+      try {
+        const res = await fetch('/api/config');
+        const config = await res.json();
+        state.guisadosCatalog = (config.guisadosDelDia || []).map((name) => name.toUpperCase());
+      } catch (err) {
+        console.error(err);
+      }
+
+      setupOrderTypeControl();
+      setupCarouselAndGestures();
+      setupModal();
+      setupWalkieTalkie();
+
+      // Pestañas principales de navegación
+      document.getElementById('tabBtnOrden')?.addEventListener('click', () => switchTab('orden'));
+      document.getElementById('tabBtnMod')?.addEventListener('click', () => switchTab('mod'));
+      document.getElementById('tabBtnCobrar')?.addEventListener('click', () => switchTab('cobrar'));
+      document.getElementById('btnCancelActiveMode')?.addEventListener('click', resetModeToNormal);
+
+      document.getElementById('btnAddNewPlate')?.addEventListener('click', createNewPlate);
+      document.getElementById('btnPrevPlate')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (state.activePlateIndex > 0) {
+          navigateToPlate(state.activePlateIndex - 1, 'left');
+        }
+      });
+      document.getElementById('btnNextPlate')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (state.activePlateIndex < state.plates.length - 1) {
+          navigateToPlate(state.activePlateIndex + 1, 'right');
+        } else {
+          createNewPlate();
+        }
+      });
+      document.getElementById('btnDeletePlate')?.addEventListener('click', () => {
+        triggerDeletePlate(state.activePlateIndex);
+      });
+
+      document.getElementById('plateNoteInput')?.addEventListener('input', (e) => {
+        if (state.plates[state.activePlateIndex]) {
+          state.plates[state.activePlateIndex].notes = e.target.value;
+        }
+      });
+
+      document.getElementById('btnSubmitOrder')?.addEventListener('click', handleMainSubmitClick);
+
+      // Eventos push en tiempo real para pantallas MOD y COBRAR (cero polling)
+      let ordersEventSource = null;
+      const connectOrdersSSE = () => {
+        try {
+          if (ordersEventSource) ordersEventSource.close();
+          ordersEventSource = new EventSource('/api/orders/stream');
+          ordersEventSource.onmessage = (e) => {
+            try {
+              const evt = JSON.parse(e.data);
+              if (evt) {
+                if (state.currentTab === 'mod') renderModGrid();
+                if (state.currentTab === 'cobrar') renderCobrarGrid();
+                if (evt.type === 'config:updated' && evt.config) {
+                  state.guisadosCatalog = (evt.config.guisadosDelDia || []).map((name) => name.toUpperCase());
+                  if (state.currentTab === 'orden') renderView();
+                }
+              }
+            } catch (_) {}
+          };
+          ordersEventSource.onerror = () => {
+            if (ordersEventSource) ordersEventSource.close();
+            setTimeout(connectOrdersSSE, 3000);
+          };
+        } catch (_) {}
+      };
+
+      connectOrdersSSE();
+
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+          if ('wakeLock' in navigator) {
+            navigator.wakeLock.request('screen').catch(() => {});
+          }
+          if (state.currentTab === 'mod') renderModGrid();
+          if (state.currentTab === 'cobrar') renderCobrarGrid();
+        }
+      });
+
+      renderView();
+    };
+
+    init();
   </script>
 </BaseLayout>

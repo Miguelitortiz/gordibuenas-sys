@@ -1,0 +1,252 @@
+{
+  "config": {
+    "guisadosDelDia": [
+      "Suadero",
+      "Chicharrón",
+      "Tinga de pollo",
+      "Requesón con rajas",
+      "Adobada",
+      "Frijolitos",
+      "Queso"
+    ],
+    "updatedAt": "2026-10-11T14:33:01.311Z"
+  },
+  "counters": {
+    "nextFolio": 15
+  },
+  "orders": [
+    {
+      "id": "7b698012-ab17-4a6e-9c45-8239b0650ebf",
+      "folio": 14,
+      "status": "pendiente",
+      "orderType": "aqui",
+      "customerName": "Nayeli",
+      "address": "",
+      "phone": "",
+      "accountId": "a0635f01-e07f-418d-b703-b70daa5398e6",
+      "round": 1,
+      "isAdditional": false,
+      "accountClosed": false,
+      "notes": "",
+      "plates": [
+        {
+          "id": "plate-1",
+          "name": "PLATO 1",
+          "items": [
+            {
+              "kind": "guisado",
+              "name": "SUADERO",
+              "quantity": 2
+            },
+            {
+              "kind": "guisado",
+              "name": "CHICHARRÓN",
+              "quantity": 2
+            },
+            {
+              "kind": "guisado",
+              "name": "ADOBADA",
+              "quantity": 1
+            },
+            {
+              "kind": "guisado",
+              "name": "REQUESÓN CON RAJAS",
+              "quantity": 1
+            }
+          ],
+          "notes": ""
+        }
+      ],
+      "createdAt": "2026-10-11T15:15:48.822Z",
+      "updatedAt": "2026-10-11T15:16:11.943Z",
+      "items": [
+        {
+          "kind": "guisado",
+          "name": "SUADERO",
+          "quantity": 2,
+          "total": 70
+        },
+        {
+          "kind": "guisado",
+          "name": "CHICHARRÓN",
+          "quantity": 2,
+          "total": 70
+        },
+        {
+          "kind": "guisado",
+          "name": "ADOBADA",
+          "quantity": 1,
+          "total": 35
+        },
+        {
+          "kind": "guisado",
+          "name": "REQUESÓN CON RAJAS",
+          "quantity": 1,
+          "total": 35
+        }
+      ],
+      "total": 210
+    },
+    {
+      "id": "fe229ad2-2747-486c-81ab-71aa94382ff9",
+      "folio": 13,
+      "status": "terminado",
+      "orderType": "llevar",
+      "customerName": "Mónica",
+      "address": "",
+      "phone": "",
+      "accountId": "c22b1eaf-74b3-47cf-8373-4acec3882d93",
+      "round": 1,
+      "isAdditional": false,
+      "accountClosed": false,
+      "notes": "",
+      "plates": [
+        {
+          "id": "plate-1",
+          "name": "PLATO 1",
+          "items": [
+            {
+              "kind": "guisado",
+              "name": "CHICHARRÓN",
+              "quantity": 4
+            },
+            {
+              "kind": "guisado",
+              "name": "TINGA DE POLLO",
+              "quantity": 2
+            }
+          ],
+          "notes": ""
+        }
+      ],
+      "createdAt": "2026-10-11T15:06:04.892Z",
+      "updatedAt": "2026-10-11T15:18:05.852Z",
+      "items": [
+        {
+          "kind": "guisado",
+          "name": "CHICHARRÓN",
+          "quantity": 4,
+          "total": 135
+        },
+        {
+          "kind": "guisado",
+          "name": "TINGA DE POLLO",
+          "quantity": 2,
+          "total": 70
+        }
+      ],
+      "total": 205
+    },
+    {
+      "id": "30763101-1e19-451e-9195-2d72e45ce574",
+      "folio": 12,
+      "status": "terminado",
+      "orderType": "domicilio",
+      "customerName": "Osiris",
+      "address": "La villita 118",
+      "phone": "3121073472",
+      "accountId": "39e5911d-c8ba-4936-b5b2-9b8074b6db5e",
+      "round": 1,
+      "isAdditional": false,
+      "accountClosed": false,
+      "notes": "",
+      "plates": [
+        {
+          "id": "plate-1",
+          "name": "PLATO 1",
+          "items": [
+            {
+              "kind": "guisado",
+              "name": "ADOBADA",
+              "quantity": 4
+            },
+            {
+              "kind": "guisado",
+              "name": "FRIJOLITOS C/ QUESO",
+              "quantity": 2
+            }
+          ],
+          "notes": ""
+        }
+      ],
+      "createdAt": "2026-10-11T15:03:05.999Z",
+      "updatedAt": "2026-10-11T15:12:35.856Z",
+      "items": [
+        {
+          "kind": "guisado",
+          "name": "ADOBADA",
+          "quantity": 4,
+          "total": 135
+        },
+        {
+          "kind": "guisado",
+          "name": "FRIJOLITOS C/ QUESO",
+          "quantity": 2,
+          "total": 70
+        }
+      ],
+      "total": 205
+    },
+    {
+      "id": "1d3da376-876f-4a87-9f2d-9e15b86a3050",
+      "folio": 11,
+      "status": "terminado",
+      "orderType": "llevar",
+      "customerName": "Liz",
+      "address": "",
+      "phone": "",
+      "accountId": "f601e105-5ca0-47d4-841b-b15ed1a79617",
+      "round": 1,
+      "isAdditional": false,
+      "accountClosed": true,
+      "notes": "",
+      "plates": [
+        {
+          "id": "plate-1",
+          "name": "PLATO 1",
+          "items": [
+            {
+              "kind": "guisado",
+              "name": "TINGA DE POLLO",
+              "quantity": 1
+            },
+            {
+              "kind": "guisado",
+              "name": "CHICHARRÓN",
+              "quantity": 1
+            },
+            {
+              "kind": "guisado",
+              "name": "QUESO",
+              "quantity": 1
+            }
+          ],
+          "notes": ""
+        }
+      ],
+      "createdAt": "2026-10-11T14:36:57.428Z",
+      "updatedAt": "2026-10-11T14:49:44.563Z",
+      "items": [
+        {
+          "kind": "guisado",
+          "name": "TINGA DE POLLO",
+          "quantity": 1,
+          "total": 35
+        },
+        {
+          "kind": "guisado",
+          "name": "CHICHARRÓN",
+          "quantity": 1,
+          "total": 35
+        },
+        {
+          "kind": "guisado",
+          "name": "QUESO",
+          "quantity": 1,
+          "total": 35
+        }
+      ],
+      "total": 105
+    }
+  ]
+}

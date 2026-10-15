@@ -2,74 +2,709 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 ---
 
-<BaseLayout title="Host · Las Gordibuenas">
-  <div class="grid" style="gap: 1rem;">
-    <div class="row between">
-      <h1>Panel host</h1>
-      <nav>
-        <a href="/">Inicio</a>
-        <a class="active" href="/host">Host</a>
-        <a href="/mesero">Mesero</a>
-        <a href="/cocina">Cocina</a>
-      </nav>
-    </div>
-
-    <section class="card">
-      <h2>Guisados del día</h2>
-      <p class="muted">Separados por coma. Ejemplo: Chicharrón, Deshebrada, Frijoles.</p>
-      <textarea id="guisados" rows="3"></textarea>
-      <div class="row">
-        <button id="guardar" class="btn">Guardar</button>
-        <span id="mensaje" class="muted"></span>
+<BaseLayout title="Host & Administración · Las Gordibuenas" fullWidth={true}>
+  <div class="host-container">
+    <!-- 1. Encabezado Suizo Host -->
+    <header class="host-header">
+      <div class="row" style="gap: 1.25rem;">
+        <div>
+          <div class="swiss-label">TERMINAL DE ADMINISTRACIÓN Y CONTROL</div>
+          <h1 style="font-size: 1.35rem; margin-top: 2px;">PANEL HOST · CORTE DE CAJA</h1>
+        </div>
+        <div id="liveClockHost" style="font-size: 1.35rem; font-weight: 900; font-variant-numeric: tabular-nums; border-left: 2px solid var(--swiss-black); padding-left: 1rem;">
+          --:--
+        </div>
       </div>
+
+      <nav class="row" style="gap: 0.4rem;">
+        <a href="/mesero" class="btn secondary" style="min-height: 34px; padding: 0.2rem 0.6rem; font-size: 0.75rem; text-decoration: none;">MESERO</a>
+        <a href="/cocina" class="btn secondary" style="min-height: 34px; padding: 0.2rem 0.6rem; font-size: 0.75rem; text-decoration: none;">COCINA</a>
+        <button id="btnRefreshHost" class="btn" style="min-height: 34px; padding: 0.2rem 0.6rem; font-size: 0.75rem;">ACTUALIZAR</button>
+      </nav>
+    </header>
+
+    <!-- 2. Tarjetas de Métricas de Ventas del Día -->
+    <section class="host-kpi-grid">
+      <!-- Venta Total Generada -->
+      <article class="host-kpi-card highlight-black">
+        <span class="host-kpi-label">VENTAS TOTALES DEL DÍA</span>
+        <div class="host-kpi-value" id="kpiTotalVenta">$0</div>
+        <span class="host-kpi-sub" id="kpiTotalVentaSub">0 PEDIDOS REGISTRADOS</span>
+      </article>
+
+      <!-- Venta Cobrada en Caja -->
+      <article class="host-kpi-card">
+        <span class="host-kpi-label">TOTAL COBRADO (EN CAJA)</span>
+        <div class="host-kpi-value" style="color: #15803d;" id="kpiVentaCobrada">$0</div>
+        <span class="host-kpi-sub" id="kpiVentaCobradaSub">0 CUENTAS COBRADAS</span>
+      </article>
+
+      <!-- Pendiente por Cobrar -->
+      <article class="host-kpi-card">
+        <span class="host-kpi-label">POR COBRAR (CUENTAS ABIERTAS)</span>
+        <div class="host-kpi-value" style="color: #b45309;" id="kpiPorCobrar">$0</div>
+        <span class="host-kpi-sub" id="kpiPorCobrarSub">0 CUENTAS ABIERTAS</span>
+      </article>
+
+      <!-- Gorditas y Bebidas Vendidas -->
+      <article class="host-kpi-card">
+        <span class="host-kpi-label">UNIDADES VENDIDAS</span>
+        <div class="host-kpi-value" id="kpiPiezasVendidas">0</div>
+        <span class="host-kpi-sub" id="kpiPiezasSub">0 GORDITAS · 0 BEBIDAS</span>
+      </article>
     </section>
 
-    <section class="grid cols-3" id="resumen"></section>
+    <!-- 3. Contenedor Principal en 2 Columnas: Gestión de Pedidos y Resumen para Corte -->
+    <div class="host-workspace">
+      
+      <!-- Columna Izquierda: Listado Detallado de Pedidos con Acción de Borrado -->
+      <section class="host-panel-column" style="flex: 1.4;">
+        <div class="host-column-header">
+          <div>
+            <h2 style="font-size: 0.95rem; font-weight: 900;">HISTORIAL DE PEDIDOS DEL DÍA (<span id="ordersCountBadge">0</span>)</h2>
+            <p class="muted" style="font-size: 0.72rem;">PUEDES BORRAR PEDIDOS INDIVIDUALES CON CONFIRMACIÓN</p>
+          </div>
+          <div class="row" style="gap: 0.35rem;">
+            <input type="text" id="filterCustomerInput" placeholder="BUSCAR POR CLIENTE O FOLIO..." style="font-size: 0.75rem; padding: 0.25rem 0.5rem; min-height: 30px; width: 210px; text-transform: uppercase;" />
+          </div>
+        </div>
+
+        <div class="host-table-container">
+          <table class="host-table">
+            <thead>
+              <tr>
+                <th style="width: 55px;">FOLIO</th>
+                <th style="width: 85px;">HORA</th>
+                <th>CLIENTE / TIPO</th>
+                <th style="width: 95px;">ESTADO</th>
+                <th style="width: 80px;">COBRO</th>
+                <th style="text-align: right; width: 75px;">TOTAL</th>
+                <th style="text-align: center; width: 75px;">ACCIÓN</th>
+              </tr>
+            </thead>
+            <tbody id="ordersTableBody">
+              <tr>
+                <td colspan="7" style="text-align: center; padding: 2rem;" class="muted">
+                  CARGANDO PEDIDOS...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Columna Derecha: Resumen para Corte de Caja y Configuración de Menú -->
+      <section class="host-panel-column" style="flex: 1;">
+        
+        <!-- Tarjeta de Resumen para Corte de Caja -->
+        <div class="host-corte-box">
+          <div class="row between" style="border-bottom: 2px solid var(--swiss-black); padding-bottom: 0.4rem; margin-bottom: 0.6rem;">
+            <div>
+              <span class="swiss-label">BALANCE DEL TURNO</span>
+              <h2 style="font-size: 1.1rem; font-weight: 900;">RESUMEN DE CORTE</h2>
+            </div>
+            <button id="btnPrintCorte" class="btn secondary" style="min-height: 28px; padding: 0.15rem 0.5rem; font-size: 0.7rem;">
+              IMPRIMIR / COPIAR
+            </button>
+          </div>
+
+          <!-- Métricas del Corte -->
+          <div class="host-corte-rows">
+            <div class="host-corte-row">
+              <span>VENTA NETA CERRADA:</span>
+              <strong id="corteVentaCerrada" style="font-size: 1.05rem; color: #15803d;">$0</strong>
+            </div>
+            <div class="host-corte-row">
+              <span>CUENTAS SIN COBRAR:</span>
+              <strong id="cortePorCobrar" style="color: #b45309;">$0</strong>
+            </div>
+            <div class="host-corte-row">
+              <span>ORDENES CANCELADAS:</span>
+              <span id="corteCanceladas">0</span>
+            </div>
+            <div class="host-corte-row" style="border-top: 1.5px solid var(--swiss-black); padding-top: 0.4rem; font-weight: 900;">
+              <span>TOTAL POTENCIAL DEL DÍA:</span>
+              <span id="corteTotalDia" style="font-size: 1.15rem;">$0</span>
+            </div>
+          </div>
+
+          <!-- Desglose de Productos Vendidos -->
+          <div style="margin-top: 0.75rem;">
+            <div class="swiss-label" style="margin-bottom: 0.35rem;">DESGLOSE POR PRODUCTO (CANTIDAD Y MONTO)</div>
+            <div class="host-products-scroll" id="productsBreakdownContainer">
+              <span class="muted" style="font-size: 0.75rem;">Sin ventas registradas hoy.</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tarjeta de Configuración de Guisados del Día -->
+        <div class="host-config-box">
+          <div class="row between" style="margin-bottom: 0.35rem;">
+            <div>
+              <span class="swiss-label">CONFIGURACIÓN</span>
+              <h3 style="font-size: 0.85rem; font-weight: 900;">GUISADOS DEL DÍA</h3>
+            </div>
+            <button id="btnGuardarGuisados" class="btn" style="min-height: 28px; padding: 0.15rem 0.5rem; font-size: 0.7rem;">
+              GUARDAR
+            </button>
+          </div>
+          <p class="muted" style="font-size: 0.68rem; margin-bottom: 0.35rem;">Separados por coma. Ejemplo: Tinga, Cochinita, Frijol, Queso, Adobada.</p>
+          <input type="text" id="guisadosInput" style="font-size: 0.8rem; padding: 0.35rem 0.55rem; text-transform: uppercase;" />
+          <span id="mensajeGuisados" style="font-size: 0.7rem; font-weight: 800; margin-top: 0.25rem; display: block;"></span>
+        </div>
+
+      </section>
+    </div>
   </div>
+
+  <!-- Modal Suizo de Confirmación para Borrar Pedido -->
+  <div id="confirmDeleteOrderModal" class="swiss-modal-backdrop" style="display: none;">
+    <div class="swiss-modal-box">
+      <header class="swiss-modal-header">
+        <h3 class="swiss-modal-title" id="modalDeleteOrderTitle">CONFIRMAR BORRADO DE PEDIDO</h3>
+      </header>
+      <div class="swiss-modal-body" id="modalDeleteOrderBody">
+        ¿Estás seguro de que deseas eliminar permanentemente este pedido del sistema? Esta acción no se puede deshacer.
+      </div>
+      <footer class="swiss-modal-actions">
+        <button type="button" class="btn secondary" id="modalCancelDeleteBtn">CANCELAR</button>
+        <button type="button" class="btn warn" id="modalConfirmDeleteBtn">ELIMINAR DEFINITIVAMENTE</button>
+      </footer>
+    </div>
+  </div>
+
+  <style>
+    .host-container {
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+      height: 100dvh;
+      max-height: 100dvh;
+      padding: 0.65rem 0.85rem;
+      box-sizing: border-box;
+      background: var(--swiss-gray-100);
+      overflow: hidden;
+    }
+
+    .host-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border: 2px solid var(--swiss-black);
+      border-radius: var(--radius-swiss);
+      background: var(--swiss-white);
+      padding: 0.5rem 0.85rem;
+      flex-shrink: 0;
+      gap: 0.75rem;
+    }
+
+    .host-kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.65rem;
+      flex-shrink: 0;
+    }
+
+    .host-kpi-card {
+      background: var(--swiss-white);
+      border: 2px solid var(--swiss-black);
+      border-radius: var(--radius-swiss);
+      padding: 0.65rem 0.85rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-height: 78px;
+    }
+
+    .host-kpi-card.highlight-black {
+      background: var(--swiss-black);
+      color: var(--swiss-white);
+    }
+    .host-kpi-card.highlight-black .host-kpi-label {
+      color: #a1a1aa;
+    }
+    .host-kpi-card.highlight-black .host-kpi-value {
+      color: var(--swiss-white);
+    }
+    .host-kpi-card.highlight-black .host-kpi-sub {
+      color: #cbd5e1;
+    }
+
+    .host-kpi-label {
+      font-size: 0.68rem;
+      font-weight: 900;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--swiss-gray-600);
+    }
+
+    .host-kpi-value {
+      font-size: 1.75rem;
+      font-weight: 900;
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+      font-variant-numeric: tabular-nums;
+      margin: 0.15rem 0;
+    }
+
+    .host-kpi-sub {
+      font-size: 0.68rem;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--swiss-gray-600);
+    }
+
+    .host-workspace {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      gap: 0.65rem;
+      height: 100%;
+    }
+
+    .host-panel-column {
+      background: var(--swiss-white);
+      border: 2px solid var(--swiss-black);
+      border-radius: var(--radius-swiss);
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .host-column-header {
+      padding: 0.55rem 0.75rem;
+      border-bottom: 2px solid var(--swiss-black);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--swiss-gray-50);
+      flex-shrink: 0;
+      gap: 0.5rem;
+    }
+
+    .host-table-container {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+    }
+
+    .host-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8rem;
+      text-align: left;
+    }
+
+    .host-table th {
+      position: sticky;
+      top: 0;
+      background: var(--swiss-gray-100);
+      border-bottom: 2px solid var(--swiss-black);
+      padding: 0.4rem 0.65rem;
+      font-size: 0.68rem;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--swiss-black);
+      z-index: 2;
+    }
+
+    .host-table td {
+      padding: 0.45rem 0.65rem;
+      border-bottom: 1px solid var(--swiss-gray-200);
+      font-weight: 700;
+      vertical-align: middle;
+    }
+
+    .host-table tr:hover td {
+      background: var(--swiss-gray-50);
+    }
+
+    .host-delete-btn {
+      background: transparent;
+      border: 1px solid var(--swiss-red);
+      color: var(--swiss-red);
+      border-radius: 3px;
+      font-size: 0.68rem;
+      font-weight: 900;
+      padding: 0.15rem 0.4rem;
+      cursor: pointer;
+      text-transform: uppercase;
+      transition: all 0.1s ease;
+    }
+    .host-delete-btn:hover {
+      background: var(--swiss-red);
+      color: var(--swiss-white);
+    }
+
+    .host-corte-box {
+      flex: 1;
+      min-height: 0;
+      padding: 0.65rem;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      border-bottom: 2px solid var(--swiss-black);
+    }
+
+    .host-corte-rows {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      font-size: 0.82rem;
+    }
+
+    .host-corte-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.15rem 0;
+    }
+
+    .host-products-scroll {
+      max-height: 140px;
+      overflow-y: auto;
+      border: 1px solid var(--swiss-gray-300);
+      border-radius: 3px;
+      padding: 0.35rem 0.5rem;
+      background: var(--swiss-gray-50);
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .host-prod-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.75rem;
+      font-weight: 800;
+      border-bottom: 1px dashed var(--swiss-gray-200);
+      padding: 0.15rem 0;
+    }
+
+    .host-config-box {
+      padding: 0.65rem;
+      flex-shrink: 0;
+      background: var(--swiss-white);
+    }
+
+    @media (max-width: 900px) {
+      .host-kpi-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      .host-workspace {
+        flex-direction: column;
+      }
+    }
+  </style>
 
   <script>
     // @ts-nocheck
-    const guisadosEl = document.getElementById('guisados');
-    const messageEl = document.getElementById('mensaje');
-    const summaryEl = document.getElementById('resumen');
 
+    let currentSummaryData = null;
+    let targetDeleteOrderId = null;
+
+    // Reloj digital en vivo
+    const updateClock = () => {
+      const clockEl = document.getElementById('liveClockHost');
+      if (clockEl) {
+        clockEl.textContent = new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      }
+    };
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // Cargar Configuración de Guisados
     const fetchConfig = async () => {
-      const res = await fetch('/api/config');
-      const data = await res.json();
-      guisadosEl.value = data.guisadosDelDia.join(', ');
+      try {
+        const res = await fetch('/api/config');
+        const data = await res.json();
+        const input = document.getElementById('guisadosInput');
+        if (input) input.value = (data.guisadosDelDia || []).join(', ');
+      } catch (e) {
+        console.error(e);
+      }
     };
 
-    const fetchSummary = async () => {
-      const res = await fetch('/api/summary');
-      const data = await res.json();
-      summaryEl.innerHTML = `
-        <article class="card"><h2>Pedidos hoy</h2><p>${data.counts.total}</p></article>
-        <article class="card"><h2>Terminados</h2><p>${data.counts.completed}</p></article>
-        <article class="card"><h2>Cancelados</h2><p>${data.counts.cancelled}</p></article>
-        <article class="card"><h2>Activos</h2><p>${data.counts.active}</p></article>
-        <article class="card"><h2>Venta cerrada</h2><p>$${data.revenue.sold}</p></article>
-        <article class="card"><h2>Venta en proceso</h2><p>$${data.revenue.inProgress}</p></article>
-      `;
-    };
+    // Guardar Guisados
+    document.getElementById('btnGuardarGuisados')?.addEventListener('click', async () => {
+      const input = document.getElementById('guisadosInput');
+      const msg = document.getElementById('mensajeGuisados');
+      if (!input) return;
 
-    document.getElementById('guardar')?.addEventListener('click', async () => {
-      const guisados = guisadosEl.value
+      const guisados = input.value
         .split(',')
-        .map((item) => item.trim())
+        .map((s) => s.trim())
         .filter(Boolean);
 
-      const response = await fetch('/api/config', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ guisadosDelDia: guisados }),
-      });
-
-      messageEl.textContent = response.ok ? 'Guardado.' : 'Error al guardar.';
-      fetchSummary();
+      try {
+        const res = await fetch('/api/config', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ guisadosDelDia: guisados }),
+        });
+        if (res.ok) {
+          if (msg) {
+            msg.textContent = 'GUISADOS GUARDADOS CORRECTAMENTE.';
+            msg.style.color = '#15803d';
+            setTimeout(() => { msg.textContent = ''; }, 3000);
+          }
+        }
+      } catch (err) {
+        if (msg) {
+          msg.textContent = 'ERROR AL GUARDAR.';
+          msg.style.color = '#b91c1c';
+        }
+      }
     });
 
+    // Cargar Resumen del Día y Pedidos
+    const loadHostDashboard = async () => {
+      try {
+        const res = await fetch('/api/summary');
+        if (!res.ok) return;
+        const data = await res.json();
+        currentSummaryData = data;
+
+        // 1. Renderizar KPIs
+        const totalVentaEl = document.getElementById('kpiTotalVenta');
+        const totalVentaSubEl = document.getElementById('kpiTotalVentaSub');
+        const ventaCobradaEl = document.getElementById('kpiVentaCobrada');
+        const ventaCobradaSubEl = document.getElementById('kpiVentaCobradaSub');
+        const porCobrarEl = document.getElementById('kpiPorCobrar');
+        const porCobrarSubEl = document.getElementById('kpiPorCobrarSub');
+        const piezasVendidasEl = document.getElementById('kpiPiezasVendidas');
+        const piezasSubEl = document.getElementById('kpiPiezasSub');
+
+        if (totalVentaEl) totalVentaEl.textContent = `$${data.revenue.totalVenta || 0}`;
+        if (totalVentaSubEl) totalVentaSubEl.textContent = `${data.counts.total || 0} PEDIDOS HOY`;
+
+        if (ventaCobradaEl) ventaCobradaEl.textContent = `$${data.revenue.collected || 0}`;
+        if (ventaCobradaSubEl) ventaCobradaSubEl.textContent = `${data.counts.closed || 0} CUENTAS COBRADAS`;
+
+        if (porCobrarEl) porCobrarEl.textContent = `$${data.revenue.pendingCollection || 0}`;
+        if (porCobrarSubEl) porCobrarSubEl.textContent = `${data.counts.open || 0} CUENTAS ABIERTAS`;
+
+        const totalPzas = (data.counts.totalGorditas || 0) + (data.counts.totalBebidas || 0);
+        if (piezasVendidasEl) piezasVendidasEl.textContent = `${totalPzas}`;
+        if (piezasSubEl) piezasSubEl.textContent = `${data.counts.totalGorditas || 0} GORDITAS · ${data.counts.totalBebidas || 0} BEBIDAS`;
+
+        // 2. Renderizar Resumen para Corte de Caja
+        const corteVentaCerradaEl = document.getElementById('corteVentaCerrada');
+        const cortePorCobrarEl = document.getElementById('cortePorCobrar');
+        const corteCanceladasEl = document.getElementById('corteCanceladas');
+        const corteTotalDiaEl = document.getElementById('corteTotalDia');
+
+        if (corteVentaCerradaEl) corteVentaCerradaEl.textContent = `$${data.revenue.collected || 0}`;
+        if (cortePorCobrarEl) cortePorCobrarEl.textContent = `$${data.revenue.pendingCollection || 0}`;
+        if (corteCanceladasEl) corteCanceladasEl.textContent = `${data.counts.cancelled || 0} PEDIDOS`;
+        if (corteTotalDiaEl) corteTotalDiaEl.textContent = `$${data.revenue.totalVenta || 0}`;
+
+        // Desglose de productos
+        const breakdownEl = document.getElementById('productsBreakdownContainer');
+        if (breakdownEl) {
+          if (!data.productsBreakdown || data.productsBreakdown.length === 0) {
+            breakdownEl.innerHTML = '<span class="muted" style="font-size: 0.75rem;">Sin ventas registradas hoy.</span>';
+          } else {
+            breakdownEl.innerHTML = data.productsBreakdown
+              .map((p) => `
+                <div class="host-prod-item">
+                  <span>${p.count}x ${p.name}</span>
+                  <span style="font-variant-numeric: tabular-nums;">$${p.total}</span>
+                </div>
+              `)
+              .join('');
+          }
+        }
+
+        // 3. Renderizar Tabla de Pedidos
+        renderOrdersTable(data.ordersList || []);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    // Renderizado y Filtro de la Tabla de Pedidos
+    const renderOrdersTable = (orders) => {
+      const tbody = document.getElementById('ordersTableBody');
+      const badge = document.getElementById('ordersCountBadge');
+      const filterVal = (document.getElementById('filterCustomerInput')?.value || '').trim().toUpperCase();
+
+      if (badge) badge.textContent = orders.length;
+      if (!tbody) return;
+
+      const filtered = orders.filter((o) => {
+        if (!filterVal) return true;
+        const folioStr = `#${o.folio}`;
+        return o.customerName.toUpperCase().includes(filterVal) || folioStr.includes(filterVal);
+      });
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="7" style="text-align: center; padding: 2rem;" class="muted">
+              NO SE ENCONTRARON PEDIDOS REGISTRADOS.
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = filtered
+        .map((order) => {
+          const time = new Date(order.createdAt).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+          
+          let statusBadge = '';
+          if (order.status === 'pendiente') statusBadge = '<span class="badge pendiente">PENDIENTE</span>';
+          else if (order.status === 'en_preparacion') statusBadge = '<span class="badge en_preparacion">COCINANDO</span>';
+          else if (order.status === 'terminado') statusBadge = '<span class="badge terminado">LISTO</span>';
+          else if (order.status === 'cancelado') statusBadge = '<span class="badge cancelado">CANCELADO</span>';
+
+          const cobroBadge = order.accountClosed
+            ? '<span class="badge terminado">COBRADO</span>'
+            : '<span class="badge pendiente">ABIERTA</span>';
+
+          const typeLabel = order.orderType === 'aqui' ? 'AQUÍ' : order.orderType === 'llevar' ? 'LLEVAR' : 'DOM';
+
+          return `
+            <tr>
+              <td><strong>#${order.folio}</strong></td>
+              <td class="muted" style="font-variant-numeric: tabular-nums;">${time}</td>
+              <td>
+                <div style="font-weight: 900;">${order.customerName}</div>
+                <div class="muted" style="font-size: 0.68rem;">[${typeLabel}] · ${order.itemsCount} PZAS</div>
+              </td>
+              <td>${statusBadge}</td>
+              <td>${cobroBadge}</td>
+              <td style="text-align: right; font-weight: 900; font-variant-numeric: tabular-nums;">$${order.total}</td>
+              <td style="text-align: center;">
+                <button class="host-delete-btn" data-delete-id="${order.id}" data-delete-folio="${order.folio}" data-delete-name="${order.customerName}">
+                  BORRAR
+                </button>
+              </td>
+            </tr>
+          `;
+        })
+        .join('');
+
+      // Event listeners para borrar pedido específico
+      tbody.querySelectorAll('.host-delete-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          openDeleteModal(btn.dataset.deleteId, btn.dataset.deleteFolio, btn.dataset.deleteName);
+        });
+      });
+    };
+
+    // Modal de Confirmación de Borrado
+    const modal = document.getElementById('confirmDeleteOrderModal');
+    const modalTitle = document.getElementById('modalDeleteOrderTitle');
+    const modalBody = document.getElementById('modalDeleteOrderBody');
+    const cancelDeleteBtn = document.getElementById('modalCancelDeleteBtn');
+    const confirmDeleteBtn = document.getElementById('modalConfirmDeleteBtn');
+
+    const openDeleteModal = (id, folio, customerName) => {
+      targetDeleteOrderId = id;
+      if (modalTitle) modalTitle.textContent = `BORRAR PEDIDO #${folio}`;
+      if (modalBody) {
+        modalBody.textContent = `¿CONFIRMAS QUE DESEAS ELIMINAR EL PEDIDO #${folio} DE "${customerName}"? SE ELIMINARÁ COMPLETAMENTE DEL HISTORIAL Y DE LAS VENTAS.`;
+      }
+      if (modal) modal.style.display = 'flex';
+    };
+
+    cancelDeleteBtn?.addEventListener('click', () => {
+      if (modal) modal.style.display = 'none';
+      targetDeleteOrderId = null;
+    });
+
+    confirmDeleteBtn?.addEventListener('click', async () => {
+      if (!targetDeleteOrderId) return;
+      try {
+        const res = await fetch(`/api/orders/${targetDeleteOrderId}`, {
+          method: 'DELETE',
+        });
+        if (res.ok) {
+          if (modal) modal.style.display = 'none';
+          targetDeleteOrderId = null;
+          await loadHostDashboard();
+        } else {
+          alert('ERROR AL ELIMINAR EL PEDIDO.');
+        }
+      } catch (err) {
+        alert('ERROR DE CONEXIÓN CON EL SERVIDOR.');
+      }
+    });
+
+    // Filtro en tiempo real al escribir
+    document.getElementById('filterCustomerInput')?.addEventListener('input', () => {
+      if (currentSummaryData) {
+        renderOrdersTable(currentSummaryData.ordersList || []);
+      }
+    });
+
+    // Botón de Actualizar manual
+    document.getElementById('btnRefreshHost')?.addEventListener('click', loadHostDashboard);
+
+    // Copiar / Imprimir Resumen de Corte de Caja
+    document.getElementById('btnPrintCorte')?.addEventListener('click', () => {
+      if (!currentSummaryData) return;
+      const data = currentSummaryData;
+      let text = `=== CORTE DE CAJA · LAS GORDIBUENAS ===\n`;
+      text += `FECHA: ${data.day}\n`;
+      text += `HORA DE CORTE: ${new Date().toLocaleTimeString('es-MX')}\n\n`;
+      text += `VENTAS TOTALES DEL DÍA: $${data.revenue.totalVenta}\n`;
+      text += `TOTAL COBRADO EN CAJA: $${data.revenue.collected}\n`;
+      text += `POR COBRAR (CUENTAS ABIERTAS): $${data.revenue.pendingCollection}\n`;
+      text += `PEDIDOS TOTALES: ${data.counts.total}\n`;
+      text += `GORDITAS VENDIDAS: ${data.counts.totalGorditas}\n`;
+      text += `BEBIDAS VENDIDAS: ${data.counts.totalBebidas}\n\n`;
+      text += `--- DESGLOSE DE PRODUCTOS ---\n`;
+      (data.productsBreakdown || []).forEach((p) => {
+        text += `${p.count}x ${p.name}: $${p.total}\n`;
+      });
+
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(text).then(() => {
+          alert('RESUMEN DE CORTE COPIADO AL PORTAPAPELES PARA IMPRIMIR O ENVIAR');
+        });
+      } else {
+        alert(text);
+      }
+    });
+
+    // Setup de eventos push en tiempo real (cero polling)
+    let hostEventSource = null;
+    const connectHostSSE = () => {
+      try {
+        if (hostEventSource) hostEventSource.close();
+        hostEventSource = new EventSource('/api/orders/stream');
+        hostEventSource.onmessage = (e) => {
+          try {
+            const evt = JSON.parse(e.data);
+            if (evt) {
+              loadHostDashboard();
+              if (evt.type === 'config:updated') fetchConfig();
+            }
+          } catch (_) {}
+        };
+        hostEventSource.onerror = () => {
+          if (hostEventSource) hostEventSource.close();
+          setTimeout(connectHostSSE, 3000);
+        };
+      } catch (_) {}
+    };
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        loadHostDashboard();
+      }
+    });
+
+    // Inicializar
     fetchConfig();
-    fetchSummary();
-    setInterval(fetchSummary, 5000);
+    loadHostDashboard();
+    connectHostSSE();
   </script>
 </BaseLayout>

@@ -1,15 +1,37 @@
 import type { APIRoute } from 'astro';
-import { DRINKS, createOrder, listOrders } from '../../../lib/store';
+import { DRINKS, createOrder, listOrders, type OrderType } from '../../../lib/store';
 import { z } from 'zod';
 
-const orderSchema = z.object({
+const plateItemSchema = z.object({
+  kind: z.enum(['guisado', 'bebida']),
+  name: z.string().trim().min(1),
+  quantity: z.number().int().min(1),
+});
+
+const plateSchema = z.object({
+  id: z.string(),
+  name: z.string().trim().min(1),
+  items: z.array(plateItemSchema),
   notes: z.string().optional(),
-  guisados: z.array(
-    z.object({
-      name: z.string().trim().min(1),
-      quantity: z.number().int().min(0),
-    }),
-  ),
+});
+
+const orderSchema = z.object({
+  orderType: z.enum(['aqui', 'llevar', 'domicilio']).default('aqui'),
+  table: z.string().optional(),
+  customerName: z.string().optional(),
+  address: z.string().optional(),
+  phone: z.string().optional(),
+  accountId: z.string().optional(),
+  notes: z.string().optional(),
+  plates: z.array(plateSchema).optional(),
+  guisados: z
+    .array(
+      z.object({
+        name: z.string().trim().min(1),
+        quantity: z.number().int().min(0),
+      }),
+    )
+    .optional(),
   drinks: z
     .object({
       aguaFrescaChica: z.number().int().min(0).optional(),
@@ -31,25 +53,51 @@ export const POST: APIRoute = async ({ request }) => {
   const parsed = orderSchema.safeParse(payload);
 
   if (!parsed.success) {
-    return new Response(JSON.stringify({ error: 'Pedido inválido.' }), {
+    return new Response(JSON.stringify({ error: 'Pedido inválido.', details: parsed.error.issues }), {
       status: 400,
       headers: { 'Content-Type': 'application/json' },
     });
   }
 
-  const hasAnyItem =
-    parsed.data.guisados.some((item) => item.quantity > 0) ||
-    Object.values(parsed.data.drinks ?? {}).some((value) => (value ?? 0) > 0);
+  const { orderType, address, plates, guisados, drinks } = parsed.data;
 
-  if (!hasAnyItem) {
-    return new Response(JSON.stringify({ error: 'Selecciona al menos un producto.' }), {
+  // Validación suiza rigurosa: Si es a domicilio, la dirección es obligatoria
+  if (orderType === 'domicilio' && (!address || address.trim().length < 5)) {
+    return new Response(
+      JSON.stringify({ error: 'La dirección es obligatoria y debe ser detallada para pedidos a domicilio.' }),
+      {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      },
+    );
+  }
+
+  // Verificar que tenga al menos un producto (sea por platos o por lista directa)
+  let hasItems = false;
+  if (plates && plates.length > 0) {
+    hasItems = plates.some((p) => p.items && p.items.length > 0 && p.items.some((i) => i.quantity > 0));
+  } else {
+    hasItems =
+      (guisados ?? []).some((item) => item.quantity > 0) ||
+      Object.values(drinks ?? {}).some((value) => (value ?? 0) > 0);
+  }
+
+  if (!hasItems) {
+    return new Response(JSON.stringify({ error: 'El pedido debe tener al menos un producto en algún plato.' }), {
       status: 400,
       headers: { 'Content-Type': 'application/json' },
     });
   }
 
   const order = await createOrder({
+    orderType: parsed.data.orderType as OrderType,
+    table: parsed.data.table,
+    customerName: parsed.data.customerName,
+    address: parsed.data.address,
+    phone: parsed.data.phone,
+    accountId: parsed.data.accountId,
     notes: parsed.data.notes,
+    plates: parsed.data.plates,
     guisados: parsed.data.guisados,
     drinks: parsed.data.drinks ?? {},
   });
